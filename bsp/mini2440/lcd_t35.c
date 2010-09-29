@@ -15,7 +15,6 @@
 #include <rtthread.h>
 
 #include <s3c24x0.h>
-#include <string.h>
 
 /* LCD driver for T3'5 */
 #define LCD_WIDTH 240
@@ -112,7 +111,6 @@
 
 #define	S3C2410_LCDINT_FRSYNC	(1<<1)
 
-volatile rt_uint16_t _rt_framebuffer[RT_HW_LCD_HEIGHT][RT_HW_LCD_WIDTH];
 volatile rt_uint16_t _rt_hw_framebuffer[RT_HW_LCD_HEIGHT][RT_HW_LCD_WIDTH];
 
 void lcd_power_enable(int invpwren,int pwren)
@@ -172,26 +170,19 @@ void LcdBkLtSet(rt_uint32_t HiRatio)
 
 void rt_hw_lcd_update(rtgui_rect_t *rect)
 {
-	volatile rt_uint16_t *src_ptr, *dst_ptr;
-	rt_uint32_t i, j;
-
-	for (i = rect->y1; i < rect->y2; i ++)
-	{
-		for(j = rect->x1; j < rect->x2; j++)
-			_rt_hw_framebuffer[i][j] = _rt_framebuffer[i][j];
-	}
+	/* nothing */
 }
 
 rt_uint8_t * rt_hw_lcd_get_framebuffer(void)
 {
-	return (rt_uint8_t *)_rt_framebuffer;
+	return (rt_uint8_t *)_rt_hw_framebuffer;
 }
 
 void rt_hw_lcd_set_pixel(rtgui_color_t *c, rt_base_t x, rt_base_t y)
 {
     if (x < RT_HW_LCD_WIDTH && y < RT_HW_LCD_HEIGHT)
 	{
-		_rt_framebuffer[(y)][(x)] = rtgui_color_to_565p(*c);
+		_rt_hw_framebuffer[(y)][(x)] = rtgui_color_to_565p(*c);
 	}
 }
 
@@ -199,7 +190,7 @@ void rt_hw_lcd_get_pixel(rtgui_color_t *c, rt_base_t x, rt_base_t y)
 {
     if (x < RT_HW_LCD_WIDTH && y < RT_HW_LCD_HEIGHT)
 	{
-		*c = rtgui_color_from_565p(_rt_framebuffer[(y)][(x)]);
+		*c = rtgui_color_from_565p(_rt_hw_framebuffer[(y)][(x)]);
 	}
 
     return ;
@@ -215,13 +206,13 @@ void rt_hw_lcd_draw_hline(rtgui_color_t *c, rt_base_t x1, rt_base_t x2, rt_base_
 
 	for (idx = x1; idx < x2; idx ++)
 	{
-		_rt_framebuffer[y][idx] = color;
+		_rt_hw_framebuffer[y][idx] = color;
 	}
 }
 
 void rt_hw_lcd_draw_vline(rtgui_color_t *c, rt_base_t x, rt_base_t y1, rt_base_t y2)
 {
-	rt_uint32_t idy;
+    rt_uint32_t idy;
 	rt_uint16_t color;
 
 	/* get color pixel */
@@ -229,13 +220,13 @@ void rt_hw_lcd_draw_vline(rtgui_color_t *c, rt_base_t x, rt_base_t y1, rt_base_t
 
 	for (idy = y1; idy < y2; idy ++)
 	{
-		_rt_framebuffer[idy][x] = color;
+		_rt_hw_framebuffer[idy][x] = color;
 	}
 }
 
 void rt_hw_lcd_draw_raw_hline(rt_uint8_t *pixels, rt_base_t x1, rt_base_t x2, rt_base_t y)
 {
- 	rt_memcpy((void*)&_rt_framebuffer[y][x1], pixels, (x2 - x1) * 2);
+    rt_memcpy((void*)&_rt_hw_framebuffer[y][x1], pixels, (x2 - x1) * 2);
 }
 
 struct rtgui_graphic_driver _rtgui_lcd_driver =
@@ -296,15 +287,14 @@ void rt_hw_lcd_init()
    	LCDCON2 = (LCD_UPPER_MARGIN << 24) | ((LCD_HEIGHT - 1) << 14) | (LCD_LOWER_MARGIN << 6) | (LCD_VSYNC_LEN << 0);
    	LCDCON3 = (LCD_RIGHT_MARGIN << 19) | ((LCD_WIDTH  - 1) <<  8) | (LCD_LEFT_MARGIN << 0);
    	LCDCON4 = (13 <<  8) | (LCD_HSYNC_LEN << 0);
-
 #if !defined(LCD_CON5)
-#define LCD_CON5 ((1<<11) | (1 << 9) | (1 << 8) | (1 << 3) | (1 << 0))
+    #define LCD_CON5 ((1<<11) | (1 << 9) | (1 << 8) | (1 << 3) | (1 << 0))
 #endif
-	LCDCON5   =  LCD_CON5;
+    LCDCON5   =  LCD_CON5;
 
-	LCDSADDR1 = ((LCD_ADDR >> 22) << 21) | ((M5D(LCD_ADDR >> 1)) <<  0);
-	LCDSADDR2 = M5D((LCD_ADDR + LCD_WIDTH * LCD_HEIGHT * 2) >> 1);
-	LCDSADDR3 = LCD_WIDTH;
+    LCDSADDR1 = ((LCD_ADDR >> 22) << 21) | ((M5D(LCD_ADDR >> 1)) <<  0);
+    LCDSADDR2 = M5D((LCD_ADDR + LCD_WIDTH * LCD_HEIGHT * 2) >> 1);
+    LCDSADDR3 = LCD_WIDTH;
 
 	LCDINTMSK |= (3);
 	LPCSEL &= (~7) ;

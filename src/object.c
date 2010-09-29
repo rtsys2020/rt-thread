@@ -176,14 +176,8 @@ void rt_object_init(struct rt_object* object, enum rt_object_class_type type, co
 	register rt_base_t temp;
 	struct rt_object_information* information;
 
-#ifdef RT_USING_MODULE
-	/* get module object information */
-	information = (rt_module_self() != RT_NULL) ? 
-		&rt_module_self()->module_object[type] : &rt_object_container[type];
-#else
 	/* get object information */
 	information = &rt_object_container[type];
-#endif
 
 	/* init object's parameters */
 
@@ -255,14 +249,8 @@ rt_object_t rt_object_allocate(enum rt_object_class_type type, const char* name)
 	register rt_base_t temp;
 	struct rt_object_information* information;
 
-#ifdef RT_USING_MODULE
-	/* get module object information */
-	information = (rt_module_self() != RT_NULL) ? 
-		&rt_module_self()->module_object[type] : &rt_object_container[type];
-#else
 	/* get object information */
 	information = &rt_object_container[type];
-#endif
 
 	object = (struct rt_object*)rt_malloc(information->object_size);
 	if (object == RT_NULL)

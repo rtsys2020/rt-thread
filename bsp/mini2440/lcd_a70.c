@@ -111,7 +111,6 @@
 
 #define	S3C2410_LCDINT_FRSYNC	(1<<1)
 
-volatile rt_uint16_t _rt_framebuffer[RT_HW_LCD_HEIGHT][RT_HW_LCD_WIDTH];
 volatile rt_uint16_t _rt_hw_framebuffer[RT_HW_LCD_HEIGHT][RT_HW_LCD_WIDTH];
 
 void lcd_power_enable(int invpwren,int pwren)
@@ -171,26 +170,19 @@ void LcdBkLtSet(rt_uint32_t HiRatio)
 
 void rt_hw_lcd_update(rtgui_rect_t *rect)
 {
-	volatile rt_uint16_t *src_ptr, *dst_ptr;
-	rt_uint32_t i, j;
-
-	for (i = rect->y1; i < rect->y2; i ++)
-	{
-		for(j = rect->x1; j < rect->x2; j++)
-			_rt_hw_framebuffer[i][j] = _rt_framebuffer[i][j];
-	}
+	/* nothing */
 }
 
 rt_uint8_t * rt_hw_lcd_get_framebuffer(void)
 {
-	return (rt_uint8_t *)_rt_framebuffer;
+	return (rt_uint8_t *)_rt_hw_framebuffer;
 }
 
 void rt_hw_lcd_set_pixel(rtgui_color_t *c, rt_base_t x, rt_base_t y)
 {
     if (x < RT_HW_LCD_WIDTH && y < RT_HW_LCD_HEIGHT)
 	{
-		_rt_framebuffer[(y)][(x)] = rtgui_color_to_565p(*c);
+		_rt_hw_framebuffer[(y)][(x)] = rtgui_color_to_565p(*c);
 	}
 }
 
@@ -198,7 +190,7 @@ void rt_hw_lcd_get_pixel(rtgui_color_t *c, rt_base_t x, rt_base_t y)
 {
     if (x < RT_HW_LCD_WIDTH && y < RT_HW_LCD_HEIGHT)
 	{
-		*c = rtgui_color_from_565p(_rt_framebuffer[(y)][(x)]);
+		*c = rtgui_color_from_565p(_rt_hw_framebuffer[(y)][(x)]);
 	}
 
     return ;
@@ -214,7 +206,7 @@ void rt_hw_lcd_draw_hline(rtgui_color_t *c, rt_base_t x1, rt_base_t x2, rt_base_
 
 	for (idx = x1; idx < x2; idx ++)
 	{
-		_rt_framebuffer[y][idx] = color;
+		_rt_hw_framebuffer[y][idx] = color;
 	}
 }
 
@@ -228,13 +220,13 @@ void rt_hw_lcd_draw_vline(rtgui_color_t *c, rt_base_t x, rt_base_t y1, rt_base_t
 
 	for (idy = y1; idy < y2; idy ++)
 	{
-		_rt_framebuffer[idy][x] = color;
+		_rt_hw_framebuffer[idy][x] = color;
 	}
 }
 
 void rt_hw_lcd_draw_raw_hline(rt_uint8_t *pixels, rt_base_t x1, rt_base_t x2, rt_base_t y)
 {
-    rt_memcpy((void*)&_rt_framebuffer[y][x1], pixels, (x2 - x1) * 2);
+    rt_memcpy((void*)&_rt_hw_framebuffer[y][x1], pixels, (x2 - x1) * 2);
 }
 
 struct rtgui_graphic_driver _rtgui_lcd_driver =

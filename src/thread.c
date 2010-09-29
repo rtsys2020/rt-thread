@@ -19,7 +19,7 @@
  * 2006-09-03     Bernard      implement rt_thread_detach
  * 2008-02-16     Bernard      fix the rt_thread_timeout bug
  * 2010-03-21     Bernard      change the errno of rt_thread_delay/sleep to RT_EOK.
- * 2010-04-11     Yi.Qiu         add module feature
+ * 2010-08-20     MingBai      Add an assertion for stack alignment.
  */
 
 #include <rtthread.h>
@@ -75,12 +75,6 @@ static rt_err_t _rt_thread_init(struct rt_thread* thread,
 	thread->stat  = RT_THREAD_INIT;
 	thread->flags = 0;
 
-#ifdef RT_USING_MODULE
-	/* init module parent */
-	thread->module_parent =
-		(rt_module_self() != RT_NULL) ? rt_module_self() : RT_NULL;
-#endif
-
 	/* init user data */
 	thread->user_data = 0;
 
@@ -125,6 +119,7 @@ rt_err_t rt_thread_init(struct rt_thread* thread,
 	/* thread check */
 	RT_ASSERT(thread != RT_NULL);
 	RT_ASSERT(stack_start != RT_NULL);
+	RT_ASSERT(((rt_uint32_t)stack_start) % RT_ALIGN_SIZE == 0 );
 
 	/* init thread object */
 	rt_object_init((rt_object_t)thread, RT_Object_Class_Thread, name);
@@ -165,7 +160,7 @@ rt_thread_t rt_thread_create (const char* name,
 	{
 		/* allocate stack failure */
 		rt_object_delete((rt_object_t)thread);
-		return RT_NULL; 
+		return RT_NULL;
 	}
 
 	_rt_thread_init(thread, name, entry, parameter,
@@ -228,12 +223,12 @@ rt_err_t rt_thread_startup (rt_thread_t thread)
 static void rt_thread_exit()
 {
 	struct rt_thread* thread;
-	register rt_base_t temp;
+    register rt_base_t temp;
 
-	/* disable interrupt */
-	temp = rt_hw_interrupt_disable();
+    /* disable interrupt */
+    temp = rt_hw_interrupt_disable();
 
-	/* get current thread */
+    /* get current thread */
 	thread = rt_current_thread;
 
 	/* remove from schedule */
@@ -246,7 +241,7 @@ static void rt_thread_exit()
 	rt_timer_detach(&(thread->thread_timer));
 
 	/* enable interrupt */
-	rt_hw_interrupt_enable(temp);
+    rt_hw_interrupt_enable(temp);
 
 	if (rt_object_is_systemobject((rt_object_t)thread) == RT_EOK)
 	{
@@ -655,3 +650,4 @@ rt_thread_t rt_thread_find(char* name)
 }
 
 /*@}*/
+

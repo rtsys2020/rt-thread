@@ -14,7 +14,6 @@
  * 2006-08-10     Bernard      add rt_show_version
  * 2010-03-17     Bernard      remove rt_strlcpy function
  *                             fix gcc compiling issue.
- * 2010-04-15     Bernard      remove weak definition on ICCM16C compiler
  */
 
 #include <rtthread.h>
@@ -408,7 +407,7 @@ void rt_show_version()
 	rt_kprintf("\n \\ | /\n");
 	rt_kprintf("- RT -     Thread Operating System\n");
 	rt_kprintf(" / | \\ 0.%d.%d build %s\n", RT_VERSION, RT_SUBVERSION, __DATE__);
-	rt_kprintf(" 2006 - 2009 Copyright by rt-thread team\n");
+	rt_kprintf(" 2006 - 2010 Copyright by rt-thread team\n");
 }
 
 /* private function */
@@ -923,6 +922,8 @@ rt_device_t rt_console_set_device(const char* name)
 
 #if defined(__GNUC__)
 void rt_hw_console_output(const char* str) __attribute__((weak));
+
+
 void rt_hw_console_output(const char* str)
 #elif defined(__CC_ARM)
 __weak void rt_hw_console_output(const char* str)
@@ -940,12 +941,12 @@ void rt_hw_console_output(const char* str)
  */
 void rt_kprintf(const char *fmt, ...)
 {
-
 	va_list args;
 	rt_size_t length;
 	static char rt_log_buf[RT_CONSOLEBUF_SIZE];
 
 	va_start(args, fmt);
+
 	length = vsnprintf(rt_log_buf, sizeof(rt_log_buf), fmt, args);
 	if (_console_device == RT_NULL)
 	{

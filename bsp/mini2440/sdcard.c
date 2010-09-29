@@ -20,12 +20,24 @@ volatile rt_uint32_t rd_cnt;
 volatile rt_uint32_t wt_cnt;
 volatile rt_int32_t RCA;
 
+/**
+ * This function will set a hook function, which will be invoked when a memory
+ * block is allocated from heap memory.
+ *
+ * @param hook the hook function
+ */
 static void sd_delay(rt_uint32_t ms)
 {
 	ms *= 7326;
 	while(--ms);
 }
 
+/**
+ * This function will set a hook function, which will be invoked when a memory
+ * block is allocated from heap memory.
+ *
+ * @param hook the hook function
+ */
 static int sd_cmd_end(int cmd, int be_resp)
 {
 	int finish0;
@@ -62,10 +74,9 @@ static int sd_cmd_end(int cmd, int be_resp)
 		{
 		    	if( (finish0&0x1f00) != 0xa00 )
 		    	{
-                    		/* 
                     		rt_kprintf("CMD%d:SDICSTA=0x%x, SDIRSP0=0x%x\n",
                         		cmd, SDICSTA, SDIRSP0);
-				*/
+
 		    		SDICSTA=finish0;
 		    		if(((finish0&0x400)==0x400))
 		        		return RT_ERROR;
@@ -76,6 +87,12 @@ static int sd_cmd_end(int cmd, int be_resp)
 	}
 }
 
+/**
+ * This function will set a hook function, which will be invoked when a memory
+ * block is allocated from heap memory.
+ *
+ * @param hook the hook function
+ */
 static int sd_data_end(void)
 {
 	int finish;
@@ -95,6 +112,12 @@ static int sd_data_end(void)
 	return RT_EOK;
 }
 
+/**
+ * This function will set a hook function, which will be invoked when a memory
+ * block is allocated from heap memory.
+ *
+ * @param hook the hook function
+ */
 static void sd_cmd0(void)
 {
 	SDICARG=0x0;
@@ -104,6 +127,12 @@ static void sd_cmd0(void)
 	SDICSTA=0x800;	    /* Clear cmd_end(no rsp) */
 }
 
+/**
+ * This function will set a hook function, which will be invoked when a memory
+ * block is allocated from heap memory.
+ *
+ * @param hook the hook function
+ */
 static int sd_cmd55(void)
 {
 	SDICARG = RCA << 16;
@@ -111,7 +140,7 @@ static int sd_cmd55(void)
 
 	if(sd_cmd_end(55, 1) == RT_ERROR)
 	{
-		/* rt_kprintf("CMD55 error\n"); */
+		rt_kprintf("CMD55 error\n");
 		return RT_ERROR;
 	}	
 
@@ -119,6 +148,12 @@ static int sd_cmd55(void)
 	return RT_EOK;
 }
 
+/**
+ * This function will set a hook function, which will be invoked when a memory
+ * block is allocated from heap memory.
+ *
+ * @param hook the hook function
+ */
 static void sd_sel_desel(char sel_desel)
 {
 	if(sel_desel)
@@ -146,6 +181,12 @@ RECMDD7:
 	}
 }
 
+/**
+ * This function will set a hook function, which will be invoked when a memory
+ * block is allocated from heap memory.
+ *
+ * @param hook the hook function
+ */
 static void sd_setbus(void)
 {
     do
@@ -159,6 +200,12 @@ static void sd_setbus(void)
     SDICSTA=0xa00;	    /* Clear cmd_end(with rsp) */
 }
 
+/**
+ * This function will set a hook function, which will be invoked when a memory
+ * block is allocated from heap memory.
+ *
+ * @param hook the hook function
+ */
 int sd_ocr(void)
 {
 	int i;
@@ -186,6 +233,12 @@ int sd_ocr(void)
 	return RT_ERROR;
 }
 
+/**
+ * This function will set a hook function, which will be invoked when a memory
+ * block is allocated from heap memory.
+ *
+ * @param hook the hook function
+ */
 rt_uint8_t sd_init(void)
 {
 	//-- SD controller & card initialize
@@ -241,6 +294,12 @@ RECMD3:
 	return RT_EOK;
 }
 
+/**
+ * This function will set a hook function, which will be invoked when a memory
+ * block is allocated from heap memory.
+ *
+ * @param hook the hook function
+ */
 rt_uint8_t sd_readblock(rt_uint32_t address, rt_uint8_t* buf)
 {
 	int status;
@@ -289,6 +348,12 @@ RERDCMD:
 	return RT_EOK;
 }
 
+/**
+ * This function will set a hook function, which will be invoked when a memory
+ * block is allocated from heap memory.
+ *
+ * @param hook the hook function
+ */
 rt_uint8_t sd_writeblock(rt_uint32_t address, rt_uint8_t* buf)
 {
 	int status;
@@ -335,27 +400,56 @@ REWTCMD:
 
 struct rt_device sdcard_device[4];
 struct dfs_partition part[4];
-
+/**
+ * This function will set a hook function, which will be invoked when a memory
+ * block is allocated from heap memory.
+ *
+ * @param hook the hook function
+ */
 static rt_err_t rt_sdcard_init(rt_device_t dev)
 {
 	return 0;
 }
 
+/**
+ * This function will set a hook function, which will be invoked when a memory
+ * block is allocated from heap memory.
+ *
+ * @param hook the hook function
+ */
 static rt_err_t rt_sdcard_open(rt_device_t dev, rt_uint16_t oflag)
 {
 	return 0;
 }
 
+/**
+ * This function will set a hook function, which will be invoked when a memory
+ * block is allocated from heap memory.
+ *
+ * @param hook the hook function
+ */
 static rt_err_t rt_sdcard_close(rt_device_t dev)
 {
 	return 0;
 }
 
+/**
+ * This function will set a hook function, which will be invoked when a memory
+ * block is allocated from heap memory.
+ *
+ * @param hook the hook function
+ */
 static rt_err_t rt_sdcard_control(rt_device_t dev, rt_uint8_t cmd, void *args)
 {
 	return 0;
 }
 
+/**
+ * This function will set a hook function, which will be invoked when a memory
+ * block is allocated from heap memory.
+ *
+ * @param hook the hook function
+ */
 static rt_size_t rt_sdcard_read(rt_device_t dev, rt_off_t pos, void* buffer, rt_size_t size)
 {
 	int i;
@@ -368,10 +462,10 @@ static rt_size_t rt_sdcard_read(rt_device_t dev, rt_off_t pos, void* buffer, rt_
 	}
 
 	/* read all sectors */
-	for (i = 0; i < size; i ++)
+	for (i = 0; i < size / SECTOR_SIZE; i ++)
 	{
 		rt_sem_take(part->lock, RT_WAITING_FOREVER);
-		sd_readblock((part->offset + i + pos)*SECTOR_SIZE,
+		sd_readblock((part->offset + i)*SECTOR_SIZE + pos,
 			(rt_uint8_t*)((rt_uint8_t*)buffer + i * SECTOR_SIZE));
 		rt_sem_release(part->lock);
 	}
@@ -380,6 +474,12 @@ static rt_size_t rt_sdcard_read(rt_device_t dev, rt_off_t pos, void* buffer, rt_
 	return size;
 }
 
+/**
+ * This function will set a hook function, which will be invoked when a memory
+ * block is allocated from heap memory.
+ *
+ * @param hook the hook function
+ */
 static rt_size_t rt_sdcard_write (rt_device_t dev, rt_off_t pos, const void* buffer, rt_size_t size)
 {
 	int i;
@@ -392,10 +492,10 @@ static rt_size_t rt_sdcard_write (rt_device_t dev, rt_off_t pos, const void* buf
 	}
 
 	/* read all sectors */
-	for (i = 0; i < size; i++)
+	for (i = 0; i < size / SECTOR_SIZE; i++)
 	{
 		rt_sem_take(part->lock, RT_WAITING_FOREVER);
-		sd_writeblock((part->offset + i + pos)*SECTOR_SIZE,
+		sd_writeblock((part->offset + i)*SECTOR_SIZE + pos,
 			(rt_uint8_t*)((rt_uint8_t*)buffer + i * SECTOR_SIZE));
 		rt_sem_release(part->lock);
 	}
@@ -404,6 +504,11 @@ static rt_size_t rt_sdcard_write (rt_device_t dev, rt_off_t pos, const void* buf
 	return size;
 }
 
+/**
+ * This function will register sd card to device system
+ *
+ * @param hook the hook function
+ */
 void rt_hw_sdcard_init()
 {
 	rt_uint8_t i, status;
@@ -443,7 +548,6 @@ void rt_hw_sdcard_init()
 					part[i].lock = rt_sem_create(sname, 1, RT_IPC_FLAG_FIFO);
 
 					/* register sdcard device */
-					sdcard_device[i].type  = RT_Device_Class_Block;					
 					sdcard_device[i].init = rt_sdcard_init;
 					sdcard_device[i].open = rt_sdcard_open;
 					sdcard_device[i].close = rt_sdcard_close;
@@ -465,7 +569,6 @@ void rt_hw_sdcard_init()
 						part[0].lock = rt_sem_create("sem_sd0", 1, RT_IPC_FLAG_FIFO);
 
 						/* register sdcard device */
-						sdcard_device[0].type  = RT_Device_Class_Block;								
 						sdcard_device[0].init = rt_sdcard_init;
 						sdcard_device[0].open = rt_sdcard_open;
 						sdcard_device[0].close = rt_sdcard_close;

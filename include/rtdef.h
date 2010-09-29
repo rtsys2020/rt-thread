@@ -10,7 +10,7 @@
  * Change Logs:
  * Date           Author       Notes
  * 2007-01-10     Bernard      the first version
- * 2008-07-12	  Bernard	   remove all rt_int8, rt_uint32_t etc typedef
+ * 2008-07-12	  Bernard	   remove all type of rt_int8, rt_uint32 etc
  */
 #ifndef __RT_DEF_H__
 #define __RT_DEF_H__
@@ -22,8 +22,8 @@ extern "C" {
 #endif
 
 /* RT-Thread version information */
-#define RT_VERSION						4L
-#define RT_SUBVERSION					0L
+#define RT_VERSION						3L
+#define RT_SUBVERSION					1L
 
 /* date type defination					*/
 typedef signed 	 char  					rt_int8_t;
@@ -64,12 +64,6 @@ typedef rt_uint32_t						rt_off_t;		/* Type for offset.							*/
     #define UNUSED  					__attribute__((unused))
 	#define ALIGN(n)					__attribute__((aligned(n)))
     #define rt_inline   				static __inline
-	/* module compiling */
-	#ifdef RT_USING_MODULE
-		#define RTT_API	__declspec(dllimport)
-	#else
-		#define RTT_API __declspec(dllexport)
-	#endif
 
 #elif defined (__IAR_SYSTEMS_ICC__)        		/* for IAR Compiler */
     #include <stdarg.h>
@@ -78,7 +72,6 @@ typedef rt_uint32_t						rt_off_t;		/* Type for offset.							*/
 	#define PRAGMA(x)					_Pragma(#x)
 	#define ALIGN(n)					PRAGMA(data_alignment=n)
     #define rt_inline 					inline
-	#define RTT_API
 
 #elif defined (__GNUC__)        		/* GNU GCC Compiler */
     #ifdef RT_USING_NEWLIB
@@ -101,7 +94,6 @@ typedef rt_uint32_t						rt_off_t;		/* Type for offset.							*/
     #define UNUSED 						__attribute__((unused))
 	#define ALIGN(n)					__attribute__((aligned(n)))
     #define rt_inline 					static __inline
-	#define RTT_API
 #endif
 
 /* event length 			*/
@@ -220,9 +212,6 @@ enum rt_object_class_type
 	RT_Object_Class_Device,								/* The object is a device 					*/
 #endif
 	RT_Object_Class_Timer,								/* The object is a timer. 					*/
-#ifdef RT_USING_MODULE
-	RT_Object_Class_Module,								/* The object is a module. 					*/
-#endif
 	RT_Object_Class_Unknown,							/* The object is unknown. 					*/
 	RT_Object_Class_Static = 0x80						/* The object is a static object. 			*/
 };
@@ -350,46 +339,9 @@ struct rt_thread
 
 	struct rt_timer thread_timer;						/* thread timer 							*/
 
-#ifdef RT_USING_MODULE
-	rt_module_t module_parent;							/* module parent 							*/
-#endif
-
 	rt_uint32_t user_data;								/* user data 								*/
 };
 /*@}*/
-
-#ifdef RT_USING_MODULE
-/*
- * module system
- */
-enum rt_module_class_type
-{
-	RT_Module_Class_APP = 0,						/* application module								*/
-	RT_Module_Class_EXTENSION,		
-	RT_Module_Class_SERVICE,							/* service module 								*/
-	RT_Module_Class_Unknown							/* unknown module 								*/
-};
-
-struct rt_module
-{
-	/* inherit from object */
-	struct rt_object parent;
-
-	rt_uint8_t* module_space;
-
-	void* module_entry;
-	rt_uint32_t stack_size;
-	rt_uint32_t thread_priority;
-	rt_thread_t module_thread;
-
-	/* module memory pool */
-	rt_uint32_t mempool_size;
-	void* module_mempool;
-
-	/* object in this module, module object is the last basic object type */
-	struct rt_object_information module_object[RT_Object_Class_Module];
-};
-#endif
 
 /**
  * @addtogroup IPC

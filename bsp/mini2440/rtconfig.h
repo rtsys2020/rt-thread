@@ -63,9 +63,6 @@
 /* Using Device System */
 #define RT_USING_DEVICE
 
-/* Using Module System */
-#define RT_USING_MODULE
-
 /* SECTION: Console options */
 /* the buffer size of console */
 #define RT_CONSOLEBUF_SIZE	128
@@ -73,14 +70,12 @@
 /* SECTION: finsh, a C-Express shell */
 /* Using FinSH as Shell*/
 #define RT_USING_FINSH
-/* Using symbol table */
-#define FINSH_USING_SYMTAB
-#define FINSH_USING_DESCRIPTION
-#define FINSH_THREAD_STACK_SIZE 4096
 
 /* SECTION: a runtime libc library */
 /* a runtime libc library */
 /* #define RT_USING_NEWLIB */
+
+/* SECTION: a mini libc */
 
 /* SECTION: C++ support */
 /* Using C++ support */
@@ -89,15 +84,8 @@
 /* SECTION: Device filesystem support */
 /* using DFS support */
 #define RT_USING_DFS
-#define RT_USING_DFS_ELMFAT
-/* use long file name feature 			*/
-#define RT_DFS_ELM_USE_LFN			1
-/* the max number of file length 		*/
-#define RT_DFS_ELM_MAX_LFN		32
+#define RT_USING_DFS_ELMFATFS
 /* #define RT_USING_DFS_YAFFS2 */
-
-#define RT_USING_DFS_NFS
-#define RT_NFS_HOST_EXPORT		"192.168.1.5:/"
 
 /* #define DFS_USING_WORKDIR */
 
@@ -108,12 +96,9 @@
 /* the max number of cached sector 		*/
 #define DFS_CACHE_MAX_NUM   		4
 
-/* Enable freemodbus protocal stack*/
-/* #define RT_USING_MODBUS */
-
 /* SECTION: lwip, a lighwight TCP/IP protocol stack */
 /* Using lighweight TCP/IP protocol stack */
-/* #define RT_USING_LWIP */
+#define RT_USING_LWIP
 #define RT_LWIP_DNS
 
 /* Trace LwIP protocol */
@@ -169,14 +154,11 @@
 /* the number of blocks for pbuf */
 #define RT_LWIP_PBUF_NUM	16
 
-/* the number of simultaneously queued TCP */
-#define RT_LWIP_TCP_SEG_NUM    40
-
 /* thread priority of tcpip thread */
 #define RT_LWIP_TCPTHREAD_PRIORITY	128
 
 /* mail box size of tcpip thread to wait for */
-#define RT_LWIP_TCPTHREAD_MBOX_SIZE	32
+#define RT_LWIP_TCPTHREAD_MBOX_SIZE	8
 
 /* thread stack size of tcpip thread */
 #define RT_LWIP_TCPTHREAD_STACKSIZE	4096

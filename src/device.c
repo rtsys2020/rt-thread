@@ -13,6 +13,7 @@
  * 2010-05-04     Bernard      add rt_device_init implementation
  */
 
+#include <rthw.h>
 #include <rtthread.h>
 #include "kservice.h"
 

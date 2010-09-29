@@ -19,7 +19,6 @@
  * 2006-09-05     Bernard      add 32 priority level support
  * 2006-09-24     Bernard      add rt_system_scheduler_start function
  * 2009-09-16     Bernard      fix _rt_scheduler_stack_check
- * 2010-04-11     yi.qiu       add module feature
  * 2010-07-13     Bernard      fix the maximal number of rt_scheduler_lock_nest 
  *                             issue found by kuronca
  */
@@ -262,11 +261,6 @@ void rt_schedule()
             rt_current_priority = highest_ready_priority;
             from_thread = rt_current_thread;
             rt_current_thread = to_thread;
-
-#ifdef RT_USING_MODULE
-            rt_module_set ((rt_current_thread->module_parent != RT_NULL) ? 
-                rt_current_thread->module_parent : RT_NULL);		
-#endif
 
 #ifdef RT_USING_HOOK
             if (rt_scheduler_hook != RT_NULL) rt_scheduler_hook(from_thread, to_thread);

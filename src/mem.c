@@ -9,7 +9,7 @@
  *
  * Change Logs:
  * Date           Author       Notes
- * 2008-7-12      Bernard      the first version
+ * 2008-7-12     Bernard      the first version
  * 2010-06-09     Bernard      fix the end stub of heap
  *                             fix memory check in rt_realloc function
  * 2010-07-13     Bernard      fix RT_ALIGN issue found by kuronca
@@ -171,11 +171,13 @@ void rt_system_heap_init(void* begin_addr, void* end_addr)
 
 	/* alignment addr */
 	if((end_align > (2 * SIZEOF_STRUCT_MEM) ) &&
-		((end_align - 2 * SIZEOF_STRUCT_MEM) >= begin_align )) {
-	/* calculate the aligned memory size */
+		((end_align - 2 * SIZEOF_STRUCT_MEM) >= begin_align ))
+   {
+	    /* calculate the aligned memory size */
 		mem_size_aligned = end_align - begin_align - 2 * SIZEOF_STRUCT_MEM;
 	}
-	else {
+	else
+    {
 		rt_kprintf("mem init, error begin address 0x%x, and end address 0x%x\n", (rt_uint32_t)begin_addr, (rt_uint32_t)end_addr);
 		return;
 	}
@@ -229,7 +231,7 @@ void *rt_malloc(rt_size_t size)
 
 #ifdef RT_MEM_DEBUG
 	if (size != RT_ALIGN(size, RT_ALIGN_SIZE)
-		rt_kprintf("malloc size %d, but align to %d\n", size, RT_ALIGN(size, RT_ALIGN_SIZE));
+	    rt_kprintf("malloc size %d, but align to %d\n", size, RT_ALIGN(size, RT_ALIGN_SIZE));
 	else
 		rt_kprintf("malloc size %d\n", size);
 #endif
@@ -284,6 +286,7 @@ void *rt_malloc(rt_size_t size)
 				mem2->prev = ptr;
 
 				/* and insert it between mem and mem->next */
+				mem->magic = HEAP_MAGIC;
 				mem->next = ptr2;
 				mem->used = 1;
 
@@ -418,7 +421,7 @@ void *rt_realloc(void *rmem, rt_size_t newsize)
 	nmem = rt_malloc(newsize);
 	if (nmem != RT_NULL) /* check memory */
 	{
-		rt_memcpy(nmem, rmem, size < newsize ? size : newsize);	
+		rt_memcpy(nmem, rmem, size < newsize ? size : newsize);
 		rt_free(rmem);
 	}
 
@@ -491,6 +494,7 @@ void rt_free(void *rmem)
 	mem = (struct heap_mem *)((rt_uint8_t *)rmem - SIZEOF_STRUCT_MEM);
 	/* ... which has to be in a used state ... */
 	RT_ASSERT(mem->used);
+	RT_ASSERT(mem->magic == HEAP_MAGIC);
 	/* ... and is now unused. */
 	mem->used = 0;
 
@@ -527,7 +531,7 @@ void list_mem()
 	rt_kprintf("used memory : %d\n", used_mem);
 	rt_kprintf("maximum allocated memory: %d\n", max_mem);
 }
-FINSH_FUNCTION_EXPORT(list_mem, list memory usage information)
+FINSH_FUNCTION_EXPORT(list_mem, list memory usage information);
 #endif
 #endif
 

@@ -1,7 +1,6 @@
 Import('env')
 Import('rtconfig')
 Import('RTT_ROOT')
-Import('projects')
 
 comm = rtconfig.ARCH + '/common'
 path = rtconfig.ARCH + '/' + rtconfig.CPU
@@ -16,19 +15,7 @@ if rtconfig.PLATFORM == 'gcc':
 if rtconfig.PLATFORM == 'iar':
 	src_local = Glob(path + '/*.c') + Glob(path + '/*_iar.S') + Glob(comm + '/*.c')
 
-# group definitions
-group = {}
-group['name'] = rtconfig.CPU.upper()
-group['src'] = File(src_local)
-group['CCFLAGS'] = ''
-group['CPPPATH'] = [RTT_ROOT + '/libcpu/' + rtconfig.ARCH + '/' + rtconfig.CPU]
-group['CPPDEFINES'] = ''
-group['LINKFLAGS'] = ''
-
-# add group to project list
-projects.append(group)
-
-env.Append(CPPPATH = group['CPPPATH'])
-obj = env.Object(group['src'])
+env.Append(CPPPATH = [RTT_ROOT + '/libcpu/' + rtconfig.ARCH + '/' + rtconfig.CPU])
+obj = env.Object(src_local)
 
 Return('obj')

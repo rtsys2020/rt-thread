@@ -2,17 +2,15 @@ import SCons.cpp
 
 # component options
 
-# make all component false
-RT_USING_FINSH      = False
-RT_USING_DFS        = False
+# make all component false 
+RT_USING_FINSH 		= False
+RT_USING_DFS 		= False
+RT_USING_DFS_EFSL 	= False
 RT_USING_DFS_ELMFAT = False
 RT_USING_DFS_YAFFS2 = False
-RT_USING_DFS_NFS    = False
-RT_USING_LWIP       = False
-RT_USING_WEBSERVER  = False
-RT_USING_RTGUI      = False
-RT_USING_MODBUS     = False
-RT_USING_MODULE     = False
+RT_USING_LWIP 		= False
+RT_USING_WEBSERVER	= False
+RT_USING_RTGUI 		= False
 
 # parse rtconfig.h to get used component
 PreProcessor = SCons.cpp.PreProcessor()
@@ -22,26 +20,20 @@ f.close()
 PreProcessor.process_contents(contents)
 rtconfig_ns = PreProcessor.cpp_namespace
 
-# libc options
-if rtconfig_ns.has_key('RT_USING_NEWLIB'):
-    RT_USING_NEWLIB = True
-
 # finsh shell options
 if rtconfig_ns.has_key('RT_USING_FINSH'):
-    RT_USING_FINSH = True
+	RT_USING_FINSH = True
 
-# device virtual filesystem options
+# device virtual filesystem options 
 if rtconfig_ns.has_key('RT_USING_DFS'):
     RT_USING_DFS = True
-
+    
+    if rtconfig_ns.has_key('RT_USING_DFS_EFSL'):
+        RT_USING_DFS_EFSL = True
     if rtconfig_ns.has_key('RT_USING_DFS_ELMFAT'):
         RT_USING_DFS_ELMFAT = True
-    if rtconfig_ns.has_key('RT_DFS_ELM_USE_LFN'):
-        RT_DFS_ELM_USE_LFN = True           
     if rtconfig_ns.has_key('RT_USING_DFS_YAFFS2'):
         RT_USING_DFS_YAFFS2 = True
-    if rtconfig_ns.has_key('RT_USING_DFS_NFS'):
-        RT_USING_DFS_NFS    = True
 
 # lwip options
 if rtconfig_ns.has_key('RT_USING_LWIP'):
@@ -53,17 +45,13 @@ if rtconfig_ns.has_key('RT_USING_LWIP'):
 if rtconfig_ns.has_key('RT_USING_RTGUI'):
     RT_USING_RTGUI = True
 
-# module options
-if rtconfig_ns.has_key('RT_USING_MODULE'):
-    RT_USING_MODULE = True
-		
 # panel options
 # 'PNL_A70','PNL_N35', 'PNL_T35'
 RT_USING_LCD_TYPE = 'PNL_T35'
 
 # toolchains options
-ARCH     = 'arm'
-CPU      = 's3c24x0'
+ARCH	 = 'arm'
+CPU		 = 's3c24x0'
 TextBase = '0x30000000'
 
 CROSS_TOOL 	= 'keil'
@@ -71,7 +59,7 @@ CROSS_TOOL 	= 'keil'
 if  CROSS_TOOL == 'gcc':
 	PLATFORM 	= 'gcc'
 	EXEC_PATH 	= 'E:/Program Files/CodeSourcery/Sourcery G++ Lite/bin'
-elif CROSS_TOOL == 'keil':
+elif CROSS_TOOL == 'keil':	
 	PLATFORM 	= 'armcc'
 	EXEC_PATH 	= 'E:/Keil'
 BUILD = 'debug'
@@ -89,9 +77,9 @@ if PLATFORM == 'gcc':
     OBJCPY = PREFIX + 'objcopy'
 
     DEVICE = ' -mcpu=arm920t'
-    CFLAGS = DEVICE
+    CFLAGS = DEVICE + ' -DRT_USING_MINILIBC' + ' -nostdinc -nostdlib -fno-builtin'
     AFLAGS = ' -c' + DEVICE + ' -x assembler-with-cpp' + ' -DTEXT_BASE=' + TextBase
-    LFLAGS = DEVICE + ' -Wl,--gc-sections,-Map=rtthread_mini2440.map,-cref,-u,_start -T mini2440_ram.ld' + ' -Ttext ' + TextBase
+    LFLAGS = DEVICE + ' -Wl,--gc-sections,-Map=main.elf.map,-cref,-u,_start -T mini2440_ram.ld' + ' -Ttext ' + TextBase
 
     CPATH = ''
     LPATH = ''
@@ -102,9 +90,11 @@ if PLATFORM == 'gcc':
     else:
         CFLAGS += ' -O2'
 
+    if RT_USING_FINSH:
+        CFLAGS += ' -D FINSH_USING_SYMTAB -DFINSH_USING_DESCRIPTION'
     if RT_USING_WEBSERVER:
         CFLAGS += ' -DWEBS -DUEMF -DRTT -D__NO_FCNTL=1 -DRT_USING_WEBSERVER'
-
+    RT_USING_MINILIBC = True
     POST_ACTION = OBJCPY + ' -O binary $TARGET rtthread.bin\n' + SIZE + ' $TARGET \n'
 
 elif PLATFORM == 'armcc':

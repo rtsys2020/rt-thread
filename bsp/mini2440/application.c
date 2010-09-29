@@ -18,9 +18,8 @@
  */
 /*@{*/
 
+#include <board.h>
 #include <rtthread.h>
-#include "dm9000.h"
-#include "touch.h"
 #include "led.h"
 
 #ifdef RT_USING_DFS
@@ -37,8 +36,8 @@
 #endif
 
 #ifdef RT_USING_RTGUI
-#include <rtgui/rtgui.h>
-extern void rt_hw_touch_init(void);
+extern void rt_hw_lcd_init(void);
+extern void rt_hw_key_init(void);
 #endif
 
 void rt_init_thread_entry(void* parameter)
@@ -64,19 +63,6 @@ void rt_init_thread_entry(void* parameter)
 	}
 #endif
 
-#ifdef RT_USING_RTGUI
-	{
-		/* init touch panel */
-		rtgui_touch_hw_init();	
-
-		/* re-init device driver */
-		rt_device_init_all();		
-		
-		/* startup rtgui */
-		rtgui_startup();
-	}
-#endif
-
 /* LwIP Initialization */
 #ifdef RT_USING_LWIP
 	{
@@ -92,6 +78,13 @@ void rt_init_thread_entry(void* parameter)
 		/* init lwip system */
 		lwip_sys_init();
 		rt_kprintf("TCP/IP initialized!\n");
+	}
+#endif
+
+#ifdef RT_USING_RTGUI
+	{
+		rt_hw_touch_init();
+		rtgui_startup();
 	}
 #endif
 }
@@ -112,6 +105,7 @@ void rt_led_thread_entry(void* parameter)
 
 	}
 }
+
 
 int rt_application_init()
 {
@@ -144,24 +138,5 @@ int rt_application_init()
 
 	return 0;
 }
-
-/* NFSv3 Initialization */
-#if defined(RT_USING_DFS) && defined(RT_USING_LWIP) && defined(RT_USING_DFS_NFS)
-#include <dfs_nfs.h>
-void nfs_start(void)
-{
-	nfs_init();
-
-	if (dfs_mount(RT_NULL, "/nfs", "nfs", 0, RT_NFS_HOST_EXPORT) == 0)
-	{
-		rt_kprintf("NFSv3 File System initialized!\n");
-	}
-	else
-		rt_kprintf("NFSv3 File System initialzation failed!\n");
-}
-
-#include "finsh.h"
-FINSH_FUNCTION_EXPORT(nfs_start, start net filesystem);
-#endif
 
 /*@}*/
