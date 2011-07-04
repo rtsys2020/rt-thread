@@ -14,14 +14,12 @@
  * 2006-08-10     Bernard      add version information
  * 2007-01-28     Bernard      rename RT_OBJECT_Class_Static to RT_Object_Class_Static
  * 2007-03-03     Bernard      clean up the definitions to rtdef.h
- * 2010-04-11     yi.qiu      add module feature
  */
 
 #ifndef __RT_THREAD_H__
 #define __RT_THREAD_H__
 
 #include <rtdef.h>
-#include <rtdebug.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,13 +34,11 @@ extern "C" {
  */
 
 void rt_system_object_init(void);
-struct rt_object_information *rt_object_get_information(enum rt_object_class_type type);
 void rt_object_init(struct rt_object* object, enum rt_object_class_type type, const char* name);
 void rt_object_detach(rt_object_t object);
 rt_object_t rt_object_allocate(enum rt_object_class_type type, const char* name);
 void rt_object_delete(rt_object_t object);
 rt_err_t rt_object_is_systemobject(rt_object_t object);
-rt_object_t rt_object_find(const char* name, rt_uint8_t type);
 
 #ifdef RT_USING_HOOK
 void rt_object_attach_sethook(void (*hook)(struct rt_object* object));
@@ -63,7 +59,6 @@ void rt_object_put_sethook(void (*hook)(struct rt_object* object));
  */
 void rt_system_tick_init(void);
 rt_tick_t rt_tick_get(void);
-void rt_tick_set(rt_tick_t tick);
 void rt_tick_increase(void);
 rt_tick_t rt_tick_from_millisecond(rt_uint32_t ms);
 
@@ -124,7 +119,6 @@ void rt_thread_idle_init(void);
 #ifdef RT_USING_HOOK
 void rt_thread_idle_sethook(void (*hook)(void));
 #endif
-void rt_thread_idle_excute(void);
 
 /*
  * schedule service
@@ -188,7 +182,6 @@ void rt_memory_info(rt_uint32_t *total,
 void rt_malloc_sethook(void (*hook)(void *ptr, rt_uint32_t size));
 void rt_free_sethook(void (*hook)(void *ptr));
 #endif
-
 #endif
 /*@}*/
 
@@ -299,27 +292,6 @@ rt_err_t  rt_device_control(rt_device_t dev, rt_uint8_t cmd, void* arg);
 /*@}*/
 #endif
 
-#ifdef RT_USING_MODULE
-/**
- * @addtogroup Module
- */
-/*@{*/
-/*
- * module interface
- */
-
-rt_module_t rt_module_load(const char* name, void* module_ptr);
-rt_err_t rt_module_unload(rt_module_t module);
-rt_module_t rt_module_open(const char* filename);
-void *rt_module_malloc(rt_size_t size);
-void *rt_module_realloc(void *ptr, rt_size_t size);
-void rt_module_free(rt_module_t module, void *addr);
-rt_module_t rt_module_self (void);
-rt_err_t rt_module_set (rt_module_t module);
-rt_module_t rt_module_find(const char* name);
-#endif
-/*@}*/
- 
 /*
  * interrupt service
  */
@@ -330,10 +302,6 @@ typedef void (*rt_isr_handler_t)(int vector);
  */
 void rt_interrupt_enter(void);
 void rt_interrupt_leave(void);
-/*
- * the number of nested interrupts.
- */
-rt_uint8_t rt_interrupt_get_nest(void);
 
 /**
  * @addtogroup KernelService
@@ -347,9 +315,7 @@ rt_int32_t rt_vsprintf(char *dest, const char *format, va_list arg_ptr);
 rt_int32_t rt_sprintf(char *buf ,const char *format,...);
 rt_int32_t rt_snprintf(char *buf, rt_size_t size, const char *format, ...);
 
-#ifdef RT_USING_DEVICE
 rt_device_t rt_console_set_device(const char* name);
-#endif
 void rt_kprintf(const char *fmt, ...);
 
 rt_err_t rt_get_errno(void);
@@ -359,7 +325,6 @@ void* rt_memset(void *src, int c, rt_ubase_t n);
 void* rt_memcpy(void *dest, const void *src, rt_ubase_t n);
 
 rt_ubase_t rt_strncmp(const char * cs, const char * ct, rt_ubase_t count);
-rt_ubase_t rt_strcmp (const char *cs, const char *ct);
 rt_ubase_t rt_strlen (const char *src);
 char *rt_strdup(const char *s);
 

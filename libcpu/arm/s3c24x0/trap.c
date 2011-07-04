@@ -25,9 +25,6 @@
 /*@{*/
 
 extern struct rt_thread *rt_current_thread;
-#ifdef RT_USING_FINSH
-extern long list_thread(void);
-#endif
 
 /**
  * this function will show registers of CPU
@@ -60,10 +57,8 @@ void rt_hw_trap_udef(struct rt_hw_register *regs)
 
 	rt_kprintf("undefined instruction\n");
 	rt_kprintf("thread - %s stack:\n", rt_current_thread->name);
+	rt_hw_backtrace((rt_uint32_t *)regs->fp, (rt_uint32_t)rt_current_thread->entry);
 
-#ifdef RT_USING_FINSH
-	list_thread();
-#endif
 	rt_hw_cpu_shutdown();
 }
 
@@ -98,10 +93,8 @@ void rt_hw_trap_pabt(struct rt_hw_register *regs)
 
 	rt_kprintf("prefetch abort\n");
 	rt_kprintf("thread - %s stack:\n", rt_current_thread->name);
+	rt_hw_backtrace((rt_uint32_t *)regs->fp, (rt_uint32_t)rt_current_thread->entry);
 
-#ifdef RT_USING_FINSH
-	list_thread();
-#endif
 	rt_hw_cpu_shutdown();
 }
 
@@ -119,10 +112,8 @@ void rt_hw_trap_dabt(struct rt_hw_register *regs)
 
 	rt_kprintf("data abort\n");
 	rt_kprintf("thread - %s stack:\n", rt_current_thread->name);
+	rt_hw_backtrace((rt_uint32_t *)regs->fp, (rt_uint32_t)rt_current_thread->entry);
 
-#ifdef RT_USING_FINSH
-	list_thread();
-#endif
 	rt_hw_cpu_shutdown();
 }
 
@@ -151,14 +142,14 @@ void rt_hw_trap_irq()
 
 	if (intstat == INTGLOBAL) return;
 
-	/* clear pending register */
-	ClearPending(1 << intstat);
-	
 	/* get interrupt service routine */
 	isr_func = isr_table[intstat];
 
 	/* turn to interrupt service routine */
 	isr_func(intstat);
+
+	/* clear pending register */
+	ClearPending(1 << intstat);
 }
 
 void rt_hw_trap_fiq()

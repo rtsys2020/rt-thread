@@ -270,8 +270,6 @@ rt_err_t rt_device_close(rt_device_t dev)
  * @param size the size of buffer
  *
  * @return the actually read size on successful, otherwise negative returned.
- *
- * @note since 0.4.0, the unit of size/pos is a block for block device.
  */
 rt_size_t rt_device_read (rt_device_t dev, rt_off_t pos, void* buffer, rt_size_t size)
 {
@@ -300,8 +298,6 @@ rt_size_t rt_device_read (rt_device_t dev, rt_off_t pos, void* buffer, rt_size_t
  * @param size the size of buffer
  *
  * @return the actually written size on successful, otherwise negative returned.
- *
- * @note since 0.4.0, the unit of size/pos is a block for block device.
  */
 rt_size_t rt_device_write(rt_device_t dev, rt_off_t pos, const void* buffer, rt_size_t size)
 {

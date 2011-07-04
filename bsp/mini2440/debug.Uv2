@@ -89,9 +89,9 @@ Options 1,0,0  // Target 'RT-Thread Debug'
  ADSLDIF ()
  ADSLDDW ()
   OPTDL (SARM.DLL)()(DARMSS9.DLL)(-pS3C2440A)(SARM.DLL)()(TARMSS9.DLL)(-pS3C2440A)
-  OPTDBG 49150,6,()()()()()()()()()(.\Ext_RAM.ini) (Segger\JLTAgdi.dll)()()()
+  OPTDBG 47614,6,()()()()()()()()()(.\Ext_RAM.ini) (Segger\JLTAgdi.dll)()()()
  FLASH1 { 1,0,0,0,1,0,0,0,4,16,0,0,0,0,0,0,0,0,0,0 }
- FLASH2 (Signum\SigUV3Arm.dll)
+ FLASH2 (Segger\JLTAgdi.dll)
  FLASH3 ("" ())
  FLASH4 ()
 EndOpt

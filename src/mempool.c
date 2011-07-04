@@ -15,8 +15,6 @@
  * 2006-08-04     Bernard      add hook support
  * 2006-08-10     Bernard      fix interrupt bug in rt_mp_alloc
  * 2010-07-13     Bernard      fix RT_ALIGN issue found by kuronca
- * 2010-10-26     yi.qiu       add module support in rt_mp_delete
- * 2011-01-24     Bernard      add object allocation check.
  */
 
 #include <rthw.h>
@@ -182,8 +180,6 @@ rt_mp_t rt_mp_create(const char* name, rt_size_t block_count, rt_size_t block_si
 	struct rt_mempool* mp;
 	register rt_base_t offset;
 
-	RT_DEBUG_NOT_IN_INTERRUPT;
-
 	/* allocate object */
 	mp = (struct rt_mempool*)rt_object_allocate(RT_Object_Class_MemPool, name);
 	if (mp == RT_NULL) return RT_NULL; /* allocate object failed */
@@ -237,8 +233,6 @@ rt_err_t rt_mp_delete(rt_mp_t mp)
 	struct rt_thread* thread;
 	register rt_ubase_t temp;
 
-	RT_DEBUG_NOT_IN_INTERRUPT;
-
 	/* parameter check */
 	RT_ASSERT(mp != RT_NULL);
 
@@ -266,13 +260,6 @@ rt_err_t rt_mp_delete(rt_mp_t mp)
 		/* enable interrupt */
 		rt_hw_interrupt_enable(temp);
 	}
-
-#ifdef RT_USING_MODULE
-	/* the mp object belongs to an application module */
-	if(mp->parent.flag & RT_OBJECT_FLAG_MODULE) 
-		rt_module_free(mp->parent.module_id, mp->start_address);
-	else
-#endif
 
 	/* release allocated room */
 	rt_free(mp->start_address);
@@ -325,8 +312,6 @@ void *rt_mp_alloc (rt_mp_t mp, rt_int32_t time)
 		}
 		else
 		{
-			RT_DEBUG_NOT_IN_INTERRUPT;
-
 			/* get current thread */
 			thread = rt_thread_self();
 
@@ -368,7 +353,9 @@ void *rt_mp_alloc (rt_mp_t mp, rt_int32_t time)
 	/* enable interrupt */
 	rt_hw_interrupt_enable(level);
 
-	RT_OBJECT_HOOK_CALL(rt_mp_alloc_hook, (mp, (rt_uint8_t*)(block_ptr + sizeof(rt_uint8_t*))));
+#ifdef RT_USING_HOOK
+	if (rt_mp_alloc_hook != RT_NULL) rt_mp_alloc_hook(mp, (rt_uint8_t*)(block_ptr + sizeof(rt_uint8_t*)));
+#endif
 
 	return (rt_uint8_t*)(block_ptr + sizeof(rt_uint8_t*));
 }
@@ -390,7 +377,9 @@ void rt_mp_free  (void *block)
 	block_ptr = (rt_uint8_t**)((rt_uint8_t*)block - sizeof(rt_uint8_t*));
 	mp = (struct rt_mempool*) *block_ptr;
 
-	RT_OBJECT_HOOK_CALL(rt_mp_free_hook, (mp, block));
+#ifdef RT_USING_HOOK
+	if (rt_mp_free_hook != RT_NULL) rt_mp_free_hook(mp, block);
+#endif
 
 	/* disable interrupt */
 	level = rt_hw_interrupt_disable();

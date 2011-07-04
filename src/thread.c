@@ -19,18 +19,22 @@
  * 2006-09-03     Bernard      implement rt_thread_detach
  * 2008-02-16     Bernard      fix the rt_thread_timeout bug
  * 2010-03-21     Bernard      change the errno of rt_thread_delay/sleep to RT_EOK.
- * 2010-11-10     Bernard      add cleanup callback function in thread exit.
+ * 2010-08-20     MingBai      Add an assertion for stack alignment.
  */
 
 #include <rtthread.h>
 #include <rthw.h>
 #include "kservice.h"
 
+/*#define THREAD_DEBUG */
 
 extern rt_list_t rt_thread_priority_table[RT_THREAD_PRIORITY_MAX];
 extern struct rt_thread* rt_current_thread;
 extern rt_uint8_t rt_current_priority;
+
+#ifdef RT_USING_HEAP
 extern rt_list_t rt_thread_defunct;
+#endif
 
 static void rt_thread_exit(void);
 void rt_thread_timeout(void* parameter);
@@ -69,9 +73,9 @@ static rt_err_t _rt_thread_init(struct rt_thread* thread,
 	/* error and flags */
 	thread->error = RT_EOK;
 	thread->stat  = RT_THREAD_INIT;
+	thread->flags = 0;
 
-	/* initialize cleanup function and user data */
-	thread->cleanup = 0;
+	/* init user data */
 	thread->user_data = 0;
 
 	/* init thread timer */
@@ -116,6 +120,7 @@ rt_err_t rt_thread_init(struct rt_thread* thread,
 	/* thread check */
 	RT_ASSERT(thread != RT_NULL);
 	RT_ASSERT(stack_start != RT_NULL);
+	RT_ASSERT(((rt_uint32_t)stack_start) % RT_ALIGN_SIZE == 0 );
 
 	/* init thread object */
 	rt_object_init((rt_object_t)thread, RT_Object_Class_Thread, name);
@@ -205,8 +210,10 @@ rt_err_t rt_thread_startup (rt_thread_t thread)
 	thread->number_mask = 1L << thread->current_priority; //1L means long int,fixed compile mistake with IAR EW M16C v3.401,fify 20100410
 #endif
 
-	RT_DEBUG_LOG(RT_DEBUG_THREAD,\
-		("startup a thread:%s with priority:%d\n", thread->name, thread->init_priority));
+#ifdef THREAD_DEBUG
+	rt_kprintf("startup a thread:%s with priority:%d\n", thread->name, thread->init_priority);
+#endif
+
 	/* change thread stat */
 	thread->stat = RT_THREAD_SUSPEND;
 	/* then resume it */
@@ -218,12 +225,12 @@ rt_err_t rt_thread_startup (rt_thread_t thread)
 static void rt_thread_exit()
 {
 	struct rt_thread* thread;
-	register rt_base_t temp;
+    register rt_base_t temp;
 
-	/* disable interrupt */
-	temp = rt_hw_interrupt_disable();
+    /* disable interrupt */
+    temp = rt_hw_interrupt_disable();
 
-	/* get current thread */
+    /* get current thread */
 	thread = rt_current_thread;
 
 	/* remove from schedule */
@@ -236,10 +243,9 @@ static void rt_thread_exit()
 	rt_timer_detach(&(thread->thread_timer));
 
 	/* enable interrupt */
-	rt_hw_interrupt_enable(temp);
+    rt_hw_interrupt_enable(temp);
 
-	if ((rt_object_is_systemobject((rt_object_t)thread) == RT_EOK) &&
-		thread->cleanup == RT_NULL)
+	if (rt_object_is_systemobject((rt_object_t)thread) == RT_EOK)
 	{
 		rt_object_detach((rt_object_t)thread);
 	}
@@ -272,8 +278,6 @@ static void rt_thread_exit()
  */
 rt_err_t rt_thread_detach (rt_thread_t thread)
 {
-	rt_base_t lock;
-
 	/* thread check */
 	RT_ASSERT(thread != RT_NULL);
 
@@ -288,18 +292,6 @@ rt_err_t rt_thread_detach (rt_thread_t thread)
 
 	/* detach object */
 	rt_object_detach((rt_object_t)thread);
-
-	if (thread->cleanup != RT_NULL)
-	{
-		/* disable interrupt */
-		lock = rt_hw_interrupt_disable();
-
-		/* insert to defunct thread list */
-		rt_list_insert_after(&rt_thread_defunct, &(thread->tlist));
-
-		/* enable interrupt */
-		rt_hw_interrupt_enable(lock);
-	}
 
 	return RT_EOK;
 }
@@ -533,13 +525,15 @@ rt_err_t rt_thread_suspend (rt_thread_t thread)
 	/* thread check */
 	RT_ASSERT(thread != RT_NULL);
 
-	RT_DEBUG_LOG(RT_DEBUG_THREAD, ("thread suspend:  %s\n", thread->name));
+#ifdef THREAD_DEBUG
+	rt_kprintf("thread suspend:  %s\n", thread->name);
+#endif
 
 	if (thread->stat != RT_THREAD_READY)
 	{
-		RT_DEBUG_LOG(RT_DEBUG_THREAD,\
-			("thread suspend: thread disorder, %d\n", thread->stat));
-		
+#ifdef THREAD_DEBUG
+		rt_kprintf("thread suspend: thread disorder, %d\n", thread->stat);
+#endif
 		return -RT_ERROR;
 	}
 
@@ -571,13 +565,15 @@ rt_err_t rt_thread_resume (rt_thread_t thread)
 	/* thread check */
 	RT_ASSERT(thread != RT_NULL);
 
-	RT_DEBUG_LOG(RT_DEBUG_THREAD, ("thread resume:  %s\n", thread->name));
+#ifdef THREAD_DEBUG
+	rt_kprintf("thread resume:  %s\n", thread->name);
+#endif
 
 	if (thread->stat != RT_THREAD_SUSPEND)
 	{
-		RT_DEBUG_LOG(RT_DEBUG_THREAD, \
-			("thread resume: thread disorder, %d\n", thread->stat));
-
+#ifdef THREAD_DEBUG
+		rt_kprintf("thread resume: thread disorder, %d\n", thread->stat);
+#endif
 		return -RT_ERROR;
 	}
 

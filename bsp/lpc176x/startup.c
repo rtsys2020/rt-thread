@@ -129,8 +129,10 @@ void rtthread_startup(void)
 
 int main(void)
 {
+	rt_uint32_t UNUSED level;
+
 	/* disable interrupt first */
-	rt_hw_interrupt_disable();
+	level = rt_hw_interrupt_disable();
 
 	/* init system setting */
 	SystemInit();

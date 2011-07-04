@@ -19,17 +19,16 @@
  * 2006-09-05     Bernard      add 32 priority level support
  * 2006-09-24     Bernard      add rt_system_scheduler_start function
  * 2009-09-16     Bernard      fix _rt_scheduler_stack_check
- * 2010-04-11     yi.qiu       add module feature
  * 2010-07-13     Bernard      fix the maximal number of rt_scheduler_lock_nest 
  *                             issue found by kuronca
- * 2010-12-13     Bernard      add defunct list initialization even if not use heap.
- * 2011-05-10     Bernard      clean scheduler debug log.
  */
 
 #include <rtthread.h>
 #include <rthw.h>
 
 #include "kservice.h"
+
+/* #define SCHEDULER_DEBUG */
 
 static rt_int16_t rt_scheduler_lock_nest;
 extern volatile rt_uint8_t rt_interrupt_nest;
@@ -48,7 +47,9 @@ rt_uint8_t rt_thread_ready_table[32];
 rt_uint32_t rt_thread_ready_priority_group;
 #endif
 
+#ifdef RT_USING_HEAP
 rt_list_t rt_thread_defunct;
+#endif
 
 const rt_uint8_t rt_lowest_bitmap[] =
 {
@@ -104,12 +105,6 @@ static void _rt_scheduler_stack_check(struct rt_thread* thread)
         rt_uint32_t level;
 
         rt_kprintf("thread:%s stack overflow\n", thread->name);
-		#ifdef RT_USING_FINSH
-		{
-			extern long list_thread(void);
-			list_thread();
-		}
-		#endif
         level = rt_hw_interrupt_disable();
         while (level);
     }
@@ -132,9 +127,6 @@ void rt_system_scheduler_init(void)
 
     rt_scheduler_lock_nest = 0;
 
-	RT_DEBUG_LOG(RT_DEBUG_SCHEDULER,
-		("start scheduler: max priority 0x%02x\n", RT_THREAD_PRIORITY_MAX));
-
     for (offset = 0; offset < RT_THREAD_PRIORITY_MAX; offset ++)
     {
         rt_list_init(&rt_thread_priority_table[offset]);
@@ -151,8 +143,10 @@ void rt_system_scheduler_init(void)
     rt_memset(rt_thread_ready_table, 0, sizeof(rt_thread_ready_table));
 #endif
 
+#ifdef RT_USING_HEAP
     /* init thread defunct */
     rt_list_init(&rt_thread_defunct);
+#endif
 }
 
 /**
@@ -268,18 +262,15 @@ void rt_schedule()
             from_thread = rt_current_thread;
             rt_current_thread = to_thread;
 
-#ifdef RT_USING_MODULE
-            rt_module_set ((rt_current_thread->module_id != RT_NULL) ? 
-                (rt_module_t)rt_current_thread->module_id : RT_NULL);		
+#ifdef RT_USING_HOOK
+            if (rt_scheduler_hook != RT_NULL) rt_scheduler_hook(from_thread, to_thread);
 #endif
 
-			RT_OBJECT_HOOK_CALL(rt_scheduler_hook, (from_thread, to_thread));
-
             /* switch to new thread */
-            RT_DEBUG_LOG(RT_DEBUG_SCHEDULER,
-            ("[%d]switch to priority#%d thread:%s\n", rt_interrupt_nest,
-                       highest_ready_priority, to_thread->name));
-
+#ifdef SCHEDULER_DEBUG
+            rt_kprintf("[%d]switch to priority#%d thread:%s\n", rt_interrupt_nest,
+                       highest_ready_priority, to_thread->name);
+#endif
 #ifdef RT_USING_OVERFLOW_CHECK
             _rt_scheduler_stack_check(to_thread);
 #endif
@@ -290,8 +281,9 @@ void rt_schedule()
             }
             else
             {
-                RT_DEBUG_LOG(RT_DEBUG_SCHEDULER,("switch in interrupt\n"));
-
+#ifdef SCHEDULER_DEBUG
+                rt_kprintf("switch in interrupt\n");
+#endif
                 rt_hw_context_switch_interrupt((rt_uint32_t)&from_thread->sp,
                                                (rt_uint32_t)&to_thread->sp);
             }
@@ -302,7 +294,7 @@ void rt_schedule()
     rt_hw_interrupt_enable(level);
 }
 
-/*
+/**
  * This function will insert a thread to system ready queue. The state of
  * thread will be set as READY and remove from suspend queue.
  *
@@ -326,12 +318,12 @@ void rt_schedule_insert_thread(struct rt_thread* thread)
                           &(thread->tlist));
 
     /* set priority mask */
+#ifdef SCHEDULER_DEBUG
 #if RT_THREAD_PRIORITY_MAX <= 32
-    RT_DEBUG_LOG(RT_DEBUG_SCHEDULER, ("insert thread[%s], the priority: %d\n", 
-		thread->name, thread->current_priority));
+    rt_kprintf("insert thread, the priority: %d\n", thread->current_priority);
 #else
-    RT_DEBUG_LOG(RT_DEBUG_SCHEDULER, ("insert thread[%s], the priority: %d 0x%x %d\n", 
-		thread->name, thread->number, thread->number_mask, thread->high_mask));
+    rt_kprintf("insert thread, the priority: %d 0x%x %d\n", thread->number, thread->number_mask, thread->high_mask);
+#endif
 #endif
 
 #if RT_THREAD_PRIORITY_MAX > 32
@@ -343,7 +335,7 @@ void rt_schedule_insert_thread(struct rt_thread* thread)
     rt_hw_interrupt_enable(temp);
 }
 
-/*
+/**
  * This function will remove a thread from system ready queue.
  *
  * @param thread the thread to be removed
@@ -359,12 +351,13 @@ void rt_schedule_remove_thread(struct rt_thread* thread)
     /* disable interrupt */
     temp = rt_hw_interrupt_disable();
 
+#ifdef SCHEDULER_DEBUG
 #if RT_THREAD_PRIORITY_MAX <= 32
-    RT_DEBUG_LOG(RT_DEBUG_SCHEDULER, ("remove thread[%s], the priority: %d\n", 
-		thread->name, thread->current_priority));
+    rt_kprintf("remove thread, the priority: %d\n", thread->current_priority);
 #else
-    RT_DEBUG_LOG(RT_DEBUG_SCHEDULER, ("remove thread[%s], the priority: %d 0x%x %d\n", 
-		thread->name, thread->number, thread->number_mask, thread->high_mask));
+    rt_kprintf("remove thread, the priority: %d 0x%x %d\n", thread->number,
+               thread->number_mask, thread->high_mask);
+#endif
 #endif
 
     /* remove thread from ready list */

@@ -28,7 +28,7 @@
  */
 static rt_err_t rt_serial_init (rt_device_t dev)
 {
-	struct serial_device* uart = (struct serial_device*) dev->user_data;
+	struct serial_device* uart = (struct serial_device*) dev->private;
 
 	if (!(dev->flag & RT_DEVICE_FLAG_ACTIVATED))
 	{
@@ -100,7 +100,7 @@ static rt_size_t rt_serial_read (rt_device_t dev, rt_off_t pos, void* buffer, rt
 	
 	ptr = buffer;
 	err_code = RT_EOK;
-	uart = (struct serial_device*)dev->user_data;
+	uart = (struct serial_device*)dev->private;
 
 	if (dev->flag & RT_DEVICE_FLAG_INT_RX)
 	{
@@ -158,7 +158,7 @@ static rt_size_t rt_serial_write (rt_device_t dev, rt_off_t pos, const void* buf
 	
 	err_code = RT_EOK;
 	ptr = (rt_uint8_t*)buffer;
-	uart = (struct serial_device*)dev->user_data;
+	uart = (struct serial_device*)dev->private;
 
 	if (dev->flag & RT_DEVICE_FLAG_INT_TX)
 	{
@@ -198,7 +198,7 @@ static rt_size_t rt_serial_write (rt_device_t dev, rt_off_t pos, const void* buf
 			}
 
 			while (!(uart->uart_device->ustat & USTAT_TXB_EMPTY));
-			uart->uart_device->utxh = (*ptr & 0xFF);
+			uart->uart_device->utxh = (*ptr & 0x1FF);
 
 			++ptr; --size;
 		}
@@ -246,7 +246,7 @@ rt_err_t rt_hw_serial_register(rt_device_t device, const char* name, rt_uint32_t
 	device->read 		= rt_serial_read;
 	device->write 		= rt_serial_write;
 	device->control 	= rt_serial_control;
-	device->user_data   = serial;
+	device->private		= serial;
 
 	/* register a character device */
 	return rt_device_register(device, name, RT_DEVICE_FLAG_RDWR | flag);
@@ -255,7 +255,7 @@ rt_err_t rt_hw_serial_register(rt_device_t device, const char* name, rt_uint32_t
 /* ISR for serial interrupt */
 void rt_hw_serial_isr(rt_device_t device)
 {
-	struct serial_device* uart = (struct serial_device*) device->user_data;
+	struct serial_device* uart = (struct serial_device*) device->private;
 	
 	/* interrupt mode receive */	
 	RT_ASSERT(device->flag & RT_DEVICE_FLAG_INT_RX);

@@ -40,7 +40,7 @@ extern void finsh_system_init(void);
 extern int Image$$RW_IRAM1$$ZI$$Limit;
 #endif
 
-#ifdef __GNUC__
+#ifdef __GNUCC__
 extern unsigned char __bss_start;
 extern unsigned char __bss_end;
 #endif
@@ -79,7 +79,7 @@ void rtthread_startup(void)
 
 	/* init board */
 	rt_hw_board_init();
-
+	
 	rt_show_version();
 
 	/* init tick */
@@ -113,6 +113,13 @@ void rtthread_startup(void)
 	/* init hardware serial device */
 	rt_hw_serial_init();
 
+#ifdef RT_USING_LWIP
+	eth_system_device_init();
+
+	/* register AT91 EMAC device */
+	sam7xether_register("E0");
+#endif
+
 #ifdef RT_USING_DFS
 	rt_hw_sdcard_init();
 #endif
@@ -140,14 +147,12 @@ void rtthread_startup(void)
 	return ;
 }
 
-#ifdef __CC_ARM
 int main (void)
 {
 	/* invoke rtthread_startup */
 	rtthread_startup();
-
+	
 	return 0;
 }
-#endif
 
 /*@}*/

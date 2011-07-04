@@ -10,7 +10,6 @@
  * Change Logs:
  * Date           Author       Notes
  * 2008-12-11     xuxinming    first version
- * 2010-4-3       LiJin        add init soft timer thread 
  */
 
 #include <rthw.h>
@@ -73,7 +72,14 @@ void rtthread_startup(void)
 
 	/* init scheduler system */
 	rt_system_scheduler_init();
+	
+#ifdef RT_USING_DEVICE
+	/* init hardware serial device */
+	rt_hw_serial_init();
 
+	/*init all registed devices*/
+	rt_device_init_all();
+#endif
 	/* init application */
 	rt_application_init();
 	
@@ -83,9 +89,6 @@ void rtthread_startup(void)
 	finsh_set_device("uart1");
 #endif
 	
-	/* init soft timer thread */
-	rt_system_timer_thread_init();
-
 	/* init idle thread */
 	rt_thread_idle_init();
 
@@ -99,11 +102,6 @@ void rtthread_startup(void)
 #ifdef __CC_ARM
 int main(void)
 {
-	rt_uint32_t UNUSED level;
-
-	/* disable interrupt first */
-	level = rt_hw_interrupt_disable();
-
 	/* invoke rtthread_startup */
 	rtthread_startup();
 	

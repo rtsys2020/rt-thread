@@ -22,12 +22,6 @@ SECTIONS
 		KEEP(*(VSymTab))
 		__vsymtab_end = .;
 		. = ALIGN(4);	
-
-		/* section information for modules */
-		. = ALIGN(4);
-		__rtmsymtab_start = .;
-		KEEP(*(RTMSymTab))
-		__rtmsymtab_end = .;
 	}
 
 	. = ALIGN(4);
@@ -62,6 +56,9 @@ SECTIONS
 	.nobss : { *(.nobss) }
 
 	. = 0x30200000;
+	.mmu_table : { *(.mmu_table) }
+
+	. = 0x30300000;
 	. = ALIGN(4);
 	__bss_start = .;
 	.bss : { *(.bss) }

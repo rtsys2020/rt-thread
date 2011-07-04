@@ -31,7 +31,7 @@ volatile int errno;
 #else
 #include <errno.h>
 #endif
-#if defined(RT_USING_DEVICE) && defined(RT_USING_CONSOLE)
+#if defined(RT_USING_DEVICE)
 static rt_device_t _console_device = RT_NULL;
 #endif
 
@@ -43,12 +43,6 @@ static rt_device_t _console_device = RT_NULL;
 rt_err_t rt_get_errno(void)
 {
 	rt_thread_t tid;
-
-	if(rt_interrupt_get_nest() != 0)
-	{
-		/* it's in interrupt context */
-		return errno;
-	}
 
 	tid = rt_thread_self();
 	if (tid == RT_NULL) return errno;
@@ -64,13 +58,6 @@ rt_err_t rt_get_errno(void)
 void rt_set_errno(rt_err_t error)
 {
 	rt_thread_t tid;
-
-	if(rt_interrupt_get_nest() != 0)
-	{
-		/* it's in interrupt context */
-		errno = error;
-		return;
-	}
 
 	tid = rt_thread_self();
 	if (tid == RT_NULL) { errno = error; return; }
@@ -917,8 +904,6 @@ rt_int32_t rt_sprintf(char *buf ,const char *format,...)
 	return n;
 }
 
-#ifdef RT_USING_CONSOLE
-
 #ifdef RT_USING_DEVICE
 /**
  * This function will set a device as console device.
@@ -962,7 +947,7 @@ void rt_hw_console_output(const char* str)
 __weak void rt_hw_console_output(const char* str)
 #elif defined(__IAR_SYSTEMS_ICC__)
 #if __VER__ > 540
-__weak
+__weak 
 #endif
 void rt_hw_console_output(const char* str)
 #endif
@@ -983,6 +968,7 @@ void rt_kprintf(const char *fmt, ...)
 	static char rt_log_buf[RT_CONSOLEBUF_SIZE];
 
 	va_start(args, fmt);
+
 	length = vsnprintf(rt_log_buf, sizeof(rt_log_buf), fmt, args);
 #ifdef RT_USING_DEVICE
 	if (_console_device == RT_NULL)
@@ -998,11 +984,6 @@ void rt_kprintf(const char *fmt, ...)
 #endif
 	va_end(args);
 }
-#else
-void rt_kprintf(const char *fmt, ...)
-{
-}
-#endif
 
 #if !defined (RT_USING_NEWLIB) && defined (RT_USING_MINILIBC) && defined (__GNUC__)
 #include <sys/types.h>
