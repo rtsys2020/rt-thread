@@ -1,7 +1,7 @@
 /*
  * File      : irq.c
  * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2006 - 2009, RT-Thread Development Team
+ * COPYRIGHT (C) 2006 - 2011, RT-Thread Development Team
  *
  * The license and distribution terms for this file may be
  * found in the file LICENSE in this distribution or at
@@ -33,13 +33,11 @@ volatile rt_uint8_t rt_interrupt_nest;
  *
  * @see rt_interrupt_leave
  */
-void rt_interrupt_enter()
+void rt_interrupt_enter(void)
 {
 	rt_base_t level;
 
-#ifdef IRQ_DEBUG
-	rt_kprintf("irq comming..., irq nest:%d\n", rt_interrupt_nest);
-#endif
+	RT_DEBUG_LOG(RT_DEBUG_IRQ, ("irq comming..., irq nest:%d\n", rt_interrupt_nest));
 
 	level = rt_hw_interrupt_disable();
 	rt_interrupt_nest ++;
@@ -53,17 +51,29 @@ void rt_interrupt_enter()
  *
  * @see rt_interrupt_enter
  */
-void rt_interrupt_leave()
+void rt_interrupt_leave(void)
 {
 	rt_base_t level;
 
-#ifdef IRQ_DEBUG
-	rt_kprintf("irq leave, irq nest:%d\n", rt_interrupt_nest);
-#endif
+	RT_DEBUG_LOG(RT_DEBUG_IRQ, ("irq leave, irq nest:%d\n", rt_interrupt_nest));
 
 	level = rt_hw_interrupt_disable();
 	rt_interrupt_nest --;
 	rt_hw_interrupt_enable(level);
 }
 
+/**
+ * This function will return the nest of interrupt.
+ * 
+ * User application can invoke this function to get whenther current 
+ * context is interrupt context.
+ * 
+ * @return the number of nested interrupts.
+ */
+rt_uint8_t rt_interrupt_get_nest(void)
+{
+	return rt_interrupt_nest;
+}
+
 /*@}*/
+

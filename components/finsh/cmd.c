@@ -164,7 +164,16 @@ static long _list_event(struct rt_list_node *list)
 	for (node = list->next; node != list; node = node->next)
 	{
 		e = (struct rt_event*)(rt_list_entry(node, struct rt_object, list));
-		rt_kprintf("%-8s  0x%08x %03d\n", e->parent.parent.name, e->set, rt_list_len(&e->parent.suspend_thread));
+		if( !rt_list_isempty(&e->parent.suspend_thread) )
+		{
+			rt_kprintf("%-8s  0x%08x %03d\n", e->parent.parent.name, e->set, rt_list_len(&e->parent.suspend_thread));
+			show_wait_queue(&(e->parent.suspend_thread));
+			rt_kprintf("\n");
+		}
+		else
+		{
+			rt_kprintf("%-8s  0x%08x 0\n", e->parent.parent.name, e->set);
+		}
 	}
 
 	return 0;
@@ -341,8 +350,13 @@ static long _list_device(struct rt_list_node *list)
 		"Block Device",
 		"Network Interface",
 		"MTD Device",
-		"CAN",
+		"CAN Device",
 		"RTC",
+		"Sound Device",
+		"Graphic Device",
+		"I2C Device",
+		"USB Slave Device",
+		"USB Host Bus",
 		"Unknown"
 	};
 
@@ -382,15 +396,17 @@ int list_module(void)
 		rt_kprintf("%-16s ", module->parent.name);
 		rt_kprintf("%-04d \n", module->nref);
 	}
+
+	return 0;
+
 }
 
 FINSH_FUNCTION_EXPORT(list_module, list module in system)
 
-int list_module_obj(const char* name)
+int list_mod_detail(const char* name)
 {
 	int i;
 	struct rt_module *module;
-	struct rt_list_node *list, *node;
 	
 	/* find module */
 	if((module = rt_module_find(name)) != RT_NULL)
@@ -480,10 +496,10 @@ int list_module_obj(const char* name)
 
 	return 0;
 }
-FINSH_FUNCTION_EXPORT(list_module_obj, list module objects in system)
+FINSH_FUNCTION_EXPORT(list_mod_detail, list module objects in system)
 #endif
 
-int list()
+long list(void)
 {
 	struct finsh_syscall_item* syscall_item;
 	struct finsh_sysvar_item*  sysvar_item;

@@ -1,7 +1,7 @@
 /*
  * File      : clock.c
  * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2006 - 2009, RT-Thread Development Team
+ * COPYRIGHT (C) 2006 - 2011, RT-Thread Development Team
  *
  * The license and distribution terms for this file may be
  * found in the file LICENSE in this distribution or at
@@ -15,8 +15,10 @@
  * 2010-03-08     Bernard      remove rt_passed_second
  * 2010-05-20     Bernard      fix the tick exceeds the maximum limits
  * 2010-07-13     Bernard      fix rt_tick_from_millisecond issue found by kuronca
+ * 2011-06-26     Bernard      add rt_tick_set function.
  */
 
+#include <rthw.h>
 #include <rtthread.h>
 
 static rt_tick_t rt_tick;
@@ -29,7 +31,7 @@ extern void rt_timer_switch(void);
  * @ingroup SystemInit
  *
  */
-void rt_system_tick_init()
+void rt_system_tick_init(void)
 {
 	rt_tick = 0;
 }
@@ -45,19 +47,32 @@ void rt_system_tick_init()
  *
  * @return current tick
  */
-rt_tick_t rt_tick_get()
+rt_tick_t rt_tick_get(void)
 {
 	/* return the global tick */
 	return rt_tick;
 }
 
 /**
+ * This function will set current tick
+ */
+void rt_tick_set(rt_tick_t tick)
+{
+	rt_base_t level;
+	level = rt_hw_interrupt_disable();
+
+	rt_tick = tick;
+	
+	rt_hw_interrupt_enable(level);
+}
+
+/**
  * This function will notify kernel there is one tick passed. Normally,
  * this function is invoked by clock ISR.
  */
-void rt_tick_increase()
+void rt_tick_increase(void)
 {
-	struct rt_thread* thread;
+	struct rt_thread *thread;
 
 	/* increase the global tick */
 	++ rt_tick;
@@ -72,10 +87,10 @@ void rt_tick_increase()
 		thread->remaining_tick = thread->init_tick;
 
 		/* yield */
-	    rt_thread_yield();
+		rt_thread_yield();
 	}
 
-	/* check timer  */
+	/* check timer */
 	rt_timer_check();
 }
 
@@ -89,7 +104,7 @@ void rt_tick_increase()
 rt_tick_t rt_tick_from_millisecond(rt_uint32_t ms)
 {
 	/* return the calculated tick */
-	return (RT_TICK_PER_SECOND * ms+999) / 1000; 
+	return (RT_TICK_PER_SECOND * ms + 999) / 1000;
 }
 
 /*@}*/

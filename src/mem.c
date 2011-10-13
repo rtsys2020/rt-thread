@@ -1,7 +1,7 @@
 /*
  * File      : mem.c
  * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2008 - 2009, RT-Thread Development Team
+ * COPYRIGHT (C) 2008 - 2011, RT-Thread Development Team
  *
  * The license and distribution terms for this file may be
  * found in the file LICENSE in this distribution or at
@@ -49,6 +49,7 @@
  *
  */
 
+#include <rthw.h>
 #include <rtthread.h>
 
 /* #define RT_MEM_DEBUG */
@@ -164,19 +165,23 @@ static void plug_holes(struct heap_mem *mem)
  * @param end_addr the end address of system page
  *
  */
-void rt_system_heap_init(void* begin_addr, void* end_addr)
+void rt_system_heap_init(void *begin_addr, void *end_addr)
 {
 	struct heap_mem *mem;
 	rt_uint32_t begin_align = RT_ALIGN((rt_uint32_t)begin_addr, RT_ALIGN_SIZE);
 	rt_uint32_t end_align = RT_ALIGN_DOWN((rt_uint32_t)end_addr, RT_ALIGN_SIZE);
 
+	RT_DEBUG_NOT_IN_INTERRUPT;
+
 	/* alignment addr */
-	if((end_align > (2 * SIZEOF_STRUCT_MEM) ) &&
-		((end_align - 2 * SIZEOF_STRUCT_MEM) >= begin_align )) {
-	/* calculate the aligned memory size */
+	if ((end_align > (2 * SIZEOF_STRUCT_MEM)) &&
+		((end_align - 2 * SIZEOF_STRUCT_MEM) >= begin_align))
+	{
+		/* calculate the aligned memory size */
 		mem_size_aligned = end_align - begin_align - 2 * SIZEOF_STRUCT_MEM;
 	}
-	else {
+	else
+	{
 		rt_kprintf("mem init, error begin address 0x%x, and end address 0x%x\n", (rt_uint32_t)begin_addr, (rt_uint32_t)end_addr);
 		return;
 	}
@@ -184,9 +189,8 @@ void rt_system_heap_init(void* begin_addr, void* end_addr)
 	/* point to begin address of heap */
 	heap_ptr = (rt_uint8_t *)begin_align;
 
-#ifdef RT_MEM_DEBUG
-	rt_kprintf("mem init, heap begin address 0x%x, size %d\n", (rt_uint32_t)heap_ptr, mem_size_aligned);
-#endif
+	RT_DEBUG_LOG(RT_DEBUG_MEM,
+		("mem init, heap begin address 0x%x, size %d\n", (rt_uint32_t)heap_ptr, mem_size_aligned));
 
 	/* initialize the start of the heap */
 	mem = (struct heap_mem *)heap_ptr;
@@ -226,28 +230,27 @@ void *rt_malloc(rt_size_t size)
 	rt_size_t ptr, ptr2;
 	struct heap_mem *mem, *mem2;
 
+	RT_DEBUG_NOT_IN_INTERRUPT;
+
 	if (size == 0) return RT_NULL;
 
-#ifdef RT_MEM_DEBUG
 	if (size != RT_ALIGN(size, RT_ALIGN_SIZE))
-		rt_kprintf("malloc size %d, but align to %d\n", size, RT_ALIGN(size, RT_ALIGN_SIZE));
+		RT_DEBUG_LOG(RT_DEBUG_MEM, ("malloc size %d, but align to %d\n", size, RT_ALIGN(size, RT_ALIGN_SIZE)));
 	else
-		rt_kprintf("malloc size %d\n", size);
-#endif
+		RT_DEBUG_LOG(RT_DEBUG_MEM, ("malloc size %d\n", size));
 
 	/* alignment size */
 	size = RT_ALIGN(size, RT_ALIGN_SIZE);
 
 	if (size > mem_size_aligned)
 	{
-#ifdef RT_MEM_DEBUG
-		rt_kprintf("no memory\n");
-#endif
+		RT_DEBUG_LOG(RT_DEBUG_MEM, ("no memory\n"));
+
 		return RT_NULL;
 	}
 
 	/* every data block must be at least MIN_SIZE_ALIGNED long */
-	if(size < MIN_SIZE_ALIGNED) size = MIN_SIZE_ALIGNED;
+	if (size < MIN_SIZE_ALIGNED) size = MIN_SIZE_ALIGNED;
 
 	/* take memory semaphore */
 	rt_sem_take(&heap_sem, RT_WAITING_FOREVER);
@@ -257,8 +260,7 @@ void *rt_malloc(rt_size_t size)
 	{
 		mem = (struct heap_mem *)&heap_ptr[ptr];
 
-		if ((!mem->used) &&
-				(mem->next - (ptr + SIZEOF_STRUCT_MEM)) >= size)
+		if ((!mem->used) && (mem->next - (ptr + SIZEOF_STRUCT_MEM)) >= size)
 		{
 			/* mem is not used and at least perfect fit is possible:
 			 * mem->next - (ptr + SIZEOF_STRUCT_MEM) gives us the 'user data size' of mem */
@@ -327,16 +329,11 @@ void *rt_malloc(rt_size_t size)
  			RT_ASSERT((rt_uint32_t)((rt_uint8_t *)mem + SIZEOF_STRUCT_MEM) % RT_ALIGN_SIZE == 0);
 			RT_ASSERT((((rt_uint32_t)mem) & (RT_ALIGN_SIZE-1)) == 0);
 
-#ifdef RT_MEM_DEBUG
-			rt_kprintf("allocate memory at 0x%x, size: %d\n", 
-				(rt_uint32_t)((rt_uint8_t*)mem + SIZEOF_STRUCT_MEM),
-				(rt_uint32_t)(mem->next - ((rt_uint8_t*)mem - heap_ptr)));
-#endif
+			RT_DEBUG_LOG(RT_DEBUG_MEM, ("allocate memory at 0x%x, size: %d\n", 
+				(rt_uint32_t)((rt_uint8_t *)mem + SIZEOF_STRUCT_MEM),
+				(rt_uint32_t)(mem->next - ((rt_uint8_t *)mem - heap_ptr))));
 
-#ifdef RT_USING_HOOK
-			if (rt_malloc_hook != RT_NULL)
-				rt_malloc_hook((rt_uint8_t *)mem + SIZEOF_STRUCT_MEM, size);
-#endif
+			RT_OBJECT_HOOK_CALL(rt_malloc_hook, (((void*)((rt_uint8_t *)mem + SIZEOF_STRUCT_MEM)), size));
 			/* return the memory data except mem struct */
 			return (rt_uint8_t *)mem + SIZEOF_STRUCT_MEM;
 		}
@@ -359,15 +356,16 @@ void *rt_realloc(void *rmem, rt_size_t newsize)
 	rt_size_t size;
 	rt_size_t ptr, ptr2;
 	struct heap_mem *mem, *mem2;
-	void* nmem;
+	void *nmem;
+
+	RT_DEBUG_NOT_IN_INTERRUPT;
 
 	/* alignment size */
 	newsize = RT_ALIGN(newsize, RT_ALIGN_SIZE);
 	if (newsize > mem_size_aligned)
 	{
-#ifdef RT_MEM_DEBUG
-		rt_kprintf("realloc: out of memory\n");
-#endif
+		RT_DEBUG_LOG(RT_DEBUG_MEM, ("realloc: out of memory\n"));
+
 		return RT_NULL;
 	}
 
@@ -449,6 +447,8 @@ void *rt_calloc(rt_size_t count, rt_size_t size)
 {
 	void *p;
 
+	RT_DEBUG_NOT_IN_INTERRUPT;
+
 	/* allocate 'count' objects of size 'size' */
 	p = rt_malloc(count * size);
 
@@ -468,31 +468,29 @@ void rt_free(void *rmem)
 {
 	struct heap_mem *mem;
 
+	RT_DEBUG_NOT_IN_INTERRUPT;
+
 	if (rmem == RT_NULL) return;
 	RT_ASSERT((((rt_uint32_t)rmem) & (RT_ALIGN_SIZE-1)) == 0);
 	RT_ASSERT((rt_uint8_t *)rmem >= (rt_uint8_t *)heap_ptr &&
 			  (rt_uint8_t *)rmem < (rt_uint8_t *)heap_end);
 
-#ifdef RT_USING_HOOK
-	if (rt_free_hook != RT_NULL) rt_free_hook(rmem);
-#endif
+	RT_OBJECT_HOOK_CALL(rt_free_hook, (rmem));
 
 	if ((rt_uint8_t *)rmem < (rt_uint8_t *)heap_ptr || (rt_uint8_t *)rmem >= (rt_uint8_t *)heap_end)
 	{
-#ifdef RT_MEM_DEBUG
-		rt_kprintf("illegal memory\n");
-#endif
+		RT_DEBUG_LOG(RT_DEBUG_MEM, ("illegal memory\n"));
+
 		return;
 	}
 
 	/* Get the corresponding struct heap_mem ... */
 	mem = (struct heap_mem *)((rt_uint8_t *)rmem - SIZEOF_STRUCT_MEM);
 
-#ifdef RT_MEM_DEBUG
-	rt_kprintf("release memory 0x%x, size: %d\n", 
+	RT_DEBUG_LOG(RT_DEBUG_MEM, ("release memory 0x%x, size: %d\n", 
 		(rt_uint32_t)rmem, 
-		(rt_uint32_t)(mem->next - ((rt_uint8_t*)mem - heap_ptr)));
-#endif
+		(rt_uint32_t)(mem->next - ((rt_uint8_t *)mem - heap_ptr))));
+
 
 	/* protect the heap from concurrent access */
 	rt_sem_take(&heap_sem, RT_WAITING_FOREVER);
@@ -520,9 +518,7 @@ void rt_free(void *rmem)
 }
 
 #ifdef RT_MEM_STATS
-void rt_memory_info(rt_uint32_t *total,
-	rt_uint32_t *used,
-	rt_uint32_t *max_used)
+void rt_memory_info(rt_uint32_t *total, rt_uint32_t *used, rt_uint32_t *max_used)
 {
 	if (total != RT_NULL) *total = mem_size_aligned;
 	if (used  != RT_NULL) *used = used_mem;
@@ -531,7 +527,7 @@ void rt_memory_info(rt_uint32_t *total,
 
 #ifdef RT_USING_FINSH
 #include <finsh.h>
-void list_mem()
+void list_mem(void)
 {
 	rt_kprintf("total memory: %d\n", mem_size_aligned);
 	rt_kprintf("used memory : %d\n", used_mem);

@@ -1,5 +1,10 @@
 import os
+import sys
 import string
+
+import xml.etree.ElementTree as etree
+from xml.etree.ElementTree import SubElement
+
 from SCons.Script import *
 
 BuildOptions = {}
@@ -86,6 +91,212 @@ def _make_path_relative(origin, dest):
         # return os.path.join(*segments).replace('\\', '/')
         return os.path.join(*segments)
 
+def xml_indent(elem, level=0):
+    i = "\n" + level*"  "
+    if len(elem):
+        if not elem.text or not elem.text.strip():
+            elem.text = i + "  "
+        if not elem.tail or not elem.tail.strip():
+            elem.tail = i
+        for elem in elem:
+            xml_indent(elem, level+1)
+        if not elem.tail or not elem.tail.strip():
+            elem.tail = i
+    else:
+        if level and (not elem.tail or not elem.tail.strip()):
+            elem.tail = i
+
+def IARAddGroup(parent, name, files, project_path):
+    group = SubElement(parent, 'group')
+    group_name = SubElement(group, 'name')
+    group_name.text = name
+    
+    for f in files:
+        fn = f.rfile()
+        name = fn.name
+        path = os.path.dirname(fn.abspath)
+    
+        basename = os.path.basename(path)
+        path = _make_path_relative(project_path, path)
+        path = os.path.join(path, name)
+        
+        file = SubElement(group, 'file')
+        file_name = SubElement(file, 'name')
+        file_name.text = '$PROJ_DIR$\\' + path
+
+iar_workspace = '''<?xml version="1.0" encoding="iso-8859-1"?>
+
+<workspace>
+  <project>
+    <path>$WS_DIR$\%s</path>
+  </project>
+  <batchBuild/>
+</workspace>
+
+
+'''
+
+def IARWorkspace(target):
+    # make an workspace 
+    workspace = target.replace('.ewp', '.eww')
+    out = file(workspace, 'wb')
+    xml = iar_workspace % target
+    out.write(xml)
+    out.close()
+    
+def IARProject(target, script):
+    project_path = os.path.dirname(os.path.abspath(target))
+
+    tree = etree.parse('template.ewp')
+    root = tree.getroot()
+
+    out = file(target, 'wb')
+
+    CPPPATH = []
+    CPPDEFINES = []
+    LINKFLAGS = ''
+    CCFLAGS = ''
+    
+    # add group
+    for group in script:
+        IARAddGroup(root, group['name'], group['src'], project_path)
+
+        # get each include path
+        if group.has_key('CPPPATH') and group['CPPPATH']:
+            CPPPATH += group['CPPPATH']
+        
+        # get each group's definitions
+        if group.has_key('CPPDEFINES') and group['CPPDEFINES']:
+            CPPDEFINES += group['CPPDEFINES']
+        
+        # get each group's link flags
+        if group.has_key('LINKFLAGS') and group['LINKFLAGS']:
+            LINKFLAGS += group['LINKFLAGS']
+    
+    # make relative path 
+    paths = set()
+    for path in CPPPATH:
+        inc = _make_path_relative(project_path, os.path.normpath(path))
+        paths.add(inc) #.replace('\\', '/')
+    
+    # setting options
+    options = tree.findall('configuration/settings/data/option')
+    for option in options:
+        # print option.text
+        name = option.find('name')
+        
+        if name.text == 'CCIncludePath2':
+            for path in paths:
+                state = SubElement(option, 'state')
+                state.text = '$PROJ_DIR$\\' + path
+        if name.text == 'CCDefines':
+            for define in CPPDEFINES:
+                state = SubElement(option, 'state')
+                state.text = define
+    
+    xml_indent(root)
+    out.write(etree.tostring(root, encoding='utf-8'))
+    out.close()
+    
+    IARWorkspace(target)
+    
+def MDK4AddGroup(ProjectFiles, parent, name, files, project_path):
+    group = SubElement(parent, 'Group')
+    group_name = SubElement(group, 'GroupName')
+    group_name.text = name
+
+    for f in files:
+        fn = f.rfile()
+        name = fn.name
+        path = os.path.dirname(fn.abspath)
+
+        basename = os.path.basename(path)
+        path = _make_path_relative(project_path, path)
+        path = os.path.join(path, name)
+        
+        files = SubElement(group, 'Files')
+        file = SubElement(files, 'File')
+        file_name = SubElement(file, 'FileName')
+        name = os.path.basename(path)
+        if ProjectFiles.count(name):
+            name = basename + '_' + name
+        ProjectFiles.append(name)
+        file_name.text = name
+        file_type = SubElement(file, 'FileType')
+        file_type.text = '%d' % _get_filetype(name)
+        file_path = SubElement(file, 'FilePath')
+        
+        file_path.text = path
+
+def MDK4Project(target, script):
+    project_path = os.path.dirname(os.path.abspath(target))
+    
+    tree = etree.parse('template.uvproj')
+    root = tree.getroot()
+    
+    out = file(target, 'wb')
+    out.write('<?xml version="1.0" encoding="UTF-8" standalone="no" ?>\n')
+    
+    CPPPATH = []
+    CPPDEFINES = []
+    LINKFLAGS = ''
+    CCFLAGS = ''
+    ProjectFiles = []
+    
+    # add group
+    groups = tree.find('Targets/Target/Groups')
+    if not groups:
+        groups = SubElement(tree.find('Targets/Target'), 'Groups')
+    for group in script:
+        group_xml = MDK4AddGroup(ProjectFiles, groups, group['name'], group['src'], project_path)
+        
+        # get each include path
+        if group.has_key('CPPPATH') and group['CPPPATH']:
+            if CPPPATH:
+                CPPPATH += group['CPPPATH']
+            else:
+                CPPPATH += group['CPPPATH']
+        
+        # get each group's definitions
+        if group.has_key('CPPDEFINES') and group['CPPDEFINES']:
+            if CPPDEFINES:
+                CPPDEFINES += ';' + group['CPPDEFINES']
+            else:
+                CPPDEFINES += group['CPPDEFINES']
+        
+        # get each group's link flags
+        if group.has_key('LINKFLAGS') and group['LINKFLAGS']:
+            if LINKFLAGS:
+                LINKFLAGS += ' ' + group['LINKFLAGS']
+            else:
+                LINKFLAGS += group['LINKFLAGS']
+    
+    # remove repeat path
+    paths = set()
+    for path in CPPPATH:
+        inc = _make_path_relative(project_path, os.path.normpath(path))
+        paths.add(inc) #.replace('\\', '/')
+    
+    paths = [i for i in paths]
+    CPPPATH = string.join(paths, ';')
+    
+    definitions = [i for i in set(CPPDEFINES)]
+    CPPDEFINES = string.join(definitions, ', ')
+    
+    # write include path, definitions and link flags
+    IncludePath = tree.find('Targets/Target/TargetOption/TargetArmAds/Cads/VariousControls/IncludePath')
+    IncludePath.text = CPPPATH
+    
+    Define = tree.find('Targets/Target/TargetOption/TargetArmAds/Cads/VariousControls/Define')
+    Define.text = CPPDEFINES
+
+    Misc = tree.find('Targets/Target/TargetOption/TargetArmAds/LDads/Misc')
+    Misc.text = LINKFLAGS
+    
+    xml_indent(root)
+    out.write(etree.tostring(root, encoding='utf-8'))
+    out.close()
+    
 def MDKProject(target, script):
     template = file('template.Uv2', "rb")
     lines = template.readlines()
@@ -104,6 +315,7 @@ def MDKProject(target, script):
 
     # write file
 
+    ProjectFiles = []
     CPPPATH = []
     CPPDEFINES = []
     LINKFLAGS = ''
@@ -140,8 +352,12 @@ def MDKProject(target, script):
             fn = node.rfile()
             name = fn.name
             path = os.path.dirname(fn.abspath)
+            basename = os.path.basename(path)
             path = _make_path_relative(project_path, path)
             path = os.path.join(path, name)
+            if ProjectFiles.count(name):
+                name = basename + '_' + name
+            ProjectFiles.append(name)
             lines.insert(line_index, 'File %d,%d,<%s><%s>\r\n'
                 % (group_index, _get_filetype(name), path, name))
             line_index += 1
@@ -230,7 +446,7 @@ class Win32Spawn:
             print data
         return 0
 
-def PrepareBuilding(env, root_directory):
+def PrepareBuilding(env, root_directory, has_libcpu=False):
     import SCons.cpp
     import rtconfig
 
@@ -248,7 +464,7 @@ def PrepareBuilding(env, root_directory):
         win32_spawn.env = env
         env['SPAWN'] = win32_spawn.spawn
 
-    # add program path 
+    # add program path
     env.PrependENVPath('PATH', rtconfig.EXEC_PATH)
 
     # parse rtconfig.h to get used component
@@ -259,7 +475,7 @@ def PrepareBuilding(env, root_directory):
     PreProcessor.process_contents(contents)
     BuildOptions = PreProcessor.cpp_namespace
 
-    if (GetDepend('RT_USING_NEWLIB') == False) and rtconfig.PLATFORM == 'gcc':
+    if (GetDepend('RT_USING_NEWLIB') == False and GetDepend('RT_USING_NOLIBC') == False) and rtconfig.PLATFORM == 'gcc':
         AddDepend('RT_USING_MINILIBC')
 
     # add target option
@@ -281,27 +497,45 @@ def PrepareBuilding(env, root_directory):
     # include kernel
     objs.append(SConscript('src/SConscript', variant_dir='build/src', duplicate=0))
     # include libcpu
-    objs.append(SConscript('libcpu/SConscript', variant_dir='build/libcpu', duplicate=0))
+    if not has_libcpu:
+        objs.append(SConscript('libcpu/SConscript', variant_dir='build/libcpu', duplicate=0))
     # include components
     objs.append(SConscript('components/SConscript', variant_dir='build/components', duplicate=0))
 
     return objs
 
+def PrepareModuleBuilding(env, root_directory):
+    import SCons.cpp
+    import rtconfig
+
+    global BuildOptions
+    global Projects
+    global Env
+    global Rtt_Root
+
+    Env = env
+    Rtt_Root = root_directory
+
+    # add program path
+    env.PrependENVPath('PATH', rtconfig.EXEC_PATH)
+
 def GetDepend(depend):
     building = True
     if type(depend) == type('str'):
-        if not BuildOptions.has_key(depend):
+        if not BuildOptions.has_key(depend) or BuildOptions[depend] == 0:
             building = False
-
+        elif BuildOptions[depend] != '':
+            return BuildOptions[depend]
+          
         return building
-    
-    # for list type depend 
+
+    # for list type depend
     for item in depend:
         if item != '':
-            if not BuildOptions.has_key(item):
+            if not BuildOptions.has_key(item) or BuildOptions[item] == 0:
                 building = False
 
-    return building 
+    return building
 
 def AddDepend(option):
     BuildOptions[option] = 1
@@ -330,11 +564,46 @@ def DefineGroup(name, src, depend, **parameters):
         Env.Append(LINKFLAGS = group['LINKFLAGS'])
 
     objs = Env.Object(group['src'])
+
+    if group.has_key('LIBRARY'):
+        objs = Env.Library(name, objs)
+
     return objs
+
+def GetCurrentDir():
+    conscript = File('SConscript')
+    fn = conscript.rfile()
+    name = fn.name
+    path = os.path.dirname(fn.abspath)
+    return path
 
 def EndBuilding(target):
     import rtconfig
     Env.AddPostAction(target, rtconfig.POST_ACTION)
 
     if GetOption('target') == 'mdk':
-        MDKProject('project.Uv2', Projects)
+        template = os.path.isfile('template.Uv2')
+        if rtconfig.CROSS_TOOL != 'keil':
+            print 'Please use Keil MDK compiler in rtconfig.py'
+            return 
+
+        if template:
+            MDKProject('project.Uv2', Projects)
+        else:
+            template = os.path.isfile('template.uvproj')
+            if template:
+                MDK4Project('project.uvproj', Projects)
+            else:
+                print 'No template project file found.'
+
+    if GetOption('target') == 'mdk4':
+        if rtconfig.CROSS_TOOL != 'keil':
+            print 'Please use Keil MDK compiler in rtconfig.py'
+            return 
+        MDK4Project('project.uvproj', Projects)
+    
+    if GetOption('target') == 'iar':
+        if rtconfig.CROSS_TOOL != 'iar':
+            print 'Please use IAR compiler in rtconfig.py'
+            return 
+        IARProject('project.ewp', Projects)

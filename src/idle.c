@@ -1,7 +1,7 @@
 /*
  * File      : idle.c
  * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2006 - 2009, RT-Thread Development Team
+ * COPYRIGHT (C) 2006 - 2011, RT-Thread Development Team
  *
  * The license and distribution terms for this file may be
  * found in the file LICENSE in this distribution or at
@@ -68,6 +68,8 @@ void rt_thread_idle_excute(void)
 #ifdef RT_USING_MODULE
 		rt_module_t module = RT_NULL;
 #endif
+		RT_DEBUG_NOT_IN_INTERRUPT;
+
 		/* disable interrupt */
 		lock = rt_hw_interrupt_disable();
 
@@ -81,8 +83,8 @@ void rt_thread_idle_excute(void)
 			module = (rt_module_t)thread->module_id;
 
 			/* if the thread is module's main thread */
-			if(module != RT_NULL && module->module_thread == thread)
-			{	
+			if (module != RT_NULL && module->module_thread == thread)
+			{
 				/* detach module's main thread */
 				module->module_thread = RT_NULL;
 			}
@@ -113,9 +115,9 @@ void rt_thread_idle_excute(void)
 		rt_hw_interrupt_enable(lock);
 
 #ifdef RT_USING_HEAP
-#ifdef RT_USING_MODULE
+#if defined(RT_USING_MODULE) && defined(RT_USING_SLAB)
 		/* the thread belongs to an application module */
-		if(thread->flags & RT_OBJECT_FLAG_MODULE)
+		if (thread->flags & RT_OBJECT_FLAG_MODULE)
 			rt_module_free((rt_module_t)thread->module_id, thread->stack_addr);
 		else
 #endif
@@ -123,33 +125,33 @@ void rt_thread_idle_excute(void)
 		rt_free(thread->stack_addr);
 		/* delete thread object */
 		rt_object_delete((rt_object_t)thread);
+#endif
 
 #ifdef RT_USING_MODULE
-		if(module != RT_NULL)
+		if (module != RT_NULL)
 		{	
 			/* if sub thread list and main thread are all empty */
-			if((module->module_thread == RT_NULL) &&
+			if ((module->module_thread == RT_NULL) &&
 				rt_list_isempty(&module->module_object[RT_Object_Class_Thread].object_list) )
 			{
-				module->nref--;
-			}	
+				module->nref --;
+			}
 		}
 
 		/* unload module */
-		if(module->nref == 0) 	rt_module_unload(module);
-#endif
+		if (module->nref == 0)	rt_module_unload(module);
 #endif
 	}
 }
 
-static void rt_thread_idle_entry(void* parameter)
+static void rt_thread_idle_entry(void *parameter)
 {
 	while (1)
 	{
-#ifdef RT_USING_HOOK
-		/* if there is an idle thread hook */
-		if (rt_thread_idle_hook != RT_NULL) rt_thread_idle_hook();
-#endif
+		#ifdef RT_USING_HOOK
+		if (rt_thread_idle_hook != RT_NULL)
+			rt_thread_idle_hook();
+		#endif
 
 		rt_thread_idle_excute();
 	}
@@ -162,7 +164,7 @@ static void rt_thread_idle_entry(void* parameter)
  *
  * @note this function must be invoked when system init.
  */
-void rt_thread_idle_init()
+void rt_thread_idle_init(void)
 {
 	/* init thread */
 	rt_thread_init(&idle,
