@@ -116,11 +116,58 @@ struct rt_device_block_ops
 struct rt_device_char_ops
 {
 	struct rt_device_ops parent;
+
+	rt_err_t (*read)  (rt_device_t dev, void* buffer, rt_size_t size);
+	rt_err_t (*write) (rt_device_t dev, const void* buffer, rt_size_t size);
 };
 
-struct rt_device_spibus_ops
+struct rt_spi_device;
+#define SPI_DEVICE(dev)	((struct rt_spi_device*)(dev))
+struct rt_device_spi_ops
 {
+	void (*configure)(struct rt_spi_device* device, int mode, int speed);
+
+	rt_size_t (*write_then_read)(struct rt_spi_device* device, const void *write_buf, rt_size_t write_nbytes, 
+		void* read_buf, rt_size_t read_nbytes);
+
+	rt_size_t (*read) (struct rt_spi_device* device, void* read_buf, rt_size_t read_nbytes);
+	rt_size_t (*write)(struct rt_spi_device* device, const void* write_buf, rt_size_t read_nbytes);
+
+	rt_size_t (*transfer)(struct rt_spi_device* device, const void *write_buf, rt_size_t write_nbytes, 
+		void* read_buf, rt_size_t read_nbytes);
 };
+
+struct rt_spi_device
+{
+	struct rt_device parent;
+
+	rt_uint32_t mode;
+	rt_uint32_t speed;
+
+	const struct rt_device_spi_ops *ops;
+};
+
+rt_inline rt_size_t rt_spi_write_then_read(struct rt_spi_device* device, const void *write_buf, rt_size_t write_nbytes, 
+	void* read_buf, rt_size_t read_nbytes)
+{
+	return device->ops->write_then_read(device, write_buf, write_nbytes, read_buf, read_nbytes);
+}
+
+rt_inline rt_size_t rt_spi_read(struct rt_spi_device* device, void* read_buf, rt_size_t nbytes)
+{
+	return device->ops->read(device, read_buf, nbytes);
+}
+
+rt_inline rt_size_t rt_spi_write(struct rt_spi_device* device, const void* write_buf, rt_size_t nbytes)
+{
+	return device->ops->write(device, write_buf, nbytes);
+}
+
+rt_inline rt_size_t rt_spi_transfer(struct rt_spi_device* device, const void *write_buf, rt_size_t write_nbytes, 
+	void* read_buf, rt_size_t read_nbytes)
+{
+	return device->ops->transfer(device, write_buf, write_nbytes, read_buf, read_nbytes);
+}
 
 /**
  * block device geometry structure
@@ -131,7 +178,6 @@ struct rt_device_blk_geometry
 	rt_uint32_t bytes_per_sector;					/**< number of bytes per sector 				*/
 	rt_uint32_t block_size;							/**< size to erase one block 					*/
 };
-
 
 /**
  * graphic device control command
@@ -199,7 +245,7 @@ struct rt_device_graphic_ops
 	void (*blit_line) (const char *pixel, int x, int y, rt_size_t size);
 };
 #define rt_graphix_ops(device)    ((struct rt_device_graphic_ops *)(device->user_data))
-
+#endif
 /*@}*/
 
 #endif

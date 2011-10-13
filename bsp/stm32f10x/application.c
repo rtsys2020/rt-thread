@@ -173,16 +173,9 @@ int rt_application_init()
         rt_thread_startup(&led_thread);
 	}
 
-#if (RT_THREAD_PRIORITY_MAX == 32)
 	init_thread = rt_thread_create("init",
 								rt_init_thread_entry, RT_NULL,
-								2048, 8, 20);
-#else
-	init_thread = rt_thread_create("init",
-								rt_init_thread_entry, RT_NULL,
-								2048, 80, 20);
-#endif
-
+								2048, RT_THREAD_PRIORITY_MAX/2, 20);
 	if (init_thread != RT_NULL)
 		rt_thread_startup(init_thread);
 

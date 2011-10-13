@@ -20,7 +20,6 @@
 #define __RT_DEF_H__
 
 #include <rtconfig.h>
-#include <rtdevice.h>
 
 #ifdef __cplusplus
 extern "C" {
