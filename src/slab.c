@@ -1,7 +1,7 @@
 /*
  * File      : slab.c
  * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2008 - 2011, RT-Thread Development Team
+ * COPYRIGHT (C) 2008 - 2009, RT-Thread Development Team
  *
  * The license and distribution terms for this file may be
  * found in the file LICENSE in this distribution or at
@@ -11,8 +11,6 @@
  * Date           Author       Notes
  * 2008-07-12     Bernard      the first version
  * 2010-07-13     Bernard      fix RT_ALIGN issue found by kuronca
- * 2010-10-23     yi.qiu       add module memory allocator
- * 2010-12-18     yi.qiu       fix zone release bug
  */
 
 /*
@@ -54,16 +52,10 @@
 
 #include <rthw.h>
 #include <rtthread.h>
-#include "kservice.h"
 
-#define RT_MEM_STATS
+/* #define RT_SLAB_DEBUG */
 
 #if defined (RT_USING_HEAP) && defined (RT_USING_SLAB)
-/* some statistical variable */
-#ifdef RT_MEM_STATS
-static rt_size_t used_mem, max_mem;
-#endif
-
 #ifdef RT_USING_HOOK
 static void (*rt_malloc_hook)(void *ptr, rt_size_t size);
 static void (*rt_free_hook)(void *ptr);
@@ -158,60 +150,65 @@ void rt_free_sethook(void (*hook)(void *ptr))
  */
 typedef struct slab_chunk
 {
-	struct slab_chunk *c_next;
+    struct slab_chunk *c_next;
 } slab_chunk;
 
 /*
  * The IN-BAND zone header is placed at the beginning of each zone.
  */
-typedef struct slab_zone
-{
-	rt_int32_t	z_magic;        /* magic number for sanity check */
-	rt_int32_t	z_nfree;        /* total free chunks / ualloc space in zone */
-	rt_int32_t	z_nmax;         /* maximum free chunks */
+typedef struct slab_zone {
+    rt_int32_t	z_magic;		/* magic number for sanity check */
+    rt_int32_t	z_nfree;		/* total free chunks / ualloc space in zone */
+    rt_int32_t	z_nmax;			/* maximum free chunks */
 
-	struct slab_zone *z_next;   /* zoneary[] link if z_nfree non-zero */
-	rt_uint8_t	*z_baseptr;     /* pointer to start of chunk array */
+    struct slab_zone *z_next;	/* zoneary[] link if z_nfree non-zero */
+    rt_uint8_t	*z_baseptr;		/* pointer to start of chunk array */
 
-	rt_int32_t	z_uindex;       /* current initial allocation index */
-	rt_int32_t	z_chunksize;    /* chunk size for validation */
+	rt_int32_t	z_uindex;		/* current initial allocation index */
+    rt_int32_t	z_chunksize;	/* chunk size for validation */
 
-	rt_int32_t	z_zoneindex;    /* zone index */
-	slab_chunk	*z_freechunk;   /* free chunk list */
+	rt_int32_t	z_zoneindex;	/* zone index */
+    slab_chunk	*z_freechunk;	/* free chunk list */
 } slab_zone;
 
-#define ZALLOC_SLAB_MAGIC       0x51ab51ab
-#define ZALLOC_ZONE_LIMIT       (16 * 1024)     /* max slab-managed alloc */
-#define ZALLOC_MIN_ZONE_SIZE    (32 * 1024)     /* minimum zone size */
-#define ZALLOC_MAX_ZONE_SIZE    (128 * 1024)    /* maximum zone size */
-#define NZONES                  72              /* number of zones */
-#define ZONE_RELEASE_THRESH     2               /* threshold number of zones */
+#define ZALLOC_SLAB_MAGIC		0x51ab51ab
+#define ZALLOC_ZONE_LIMIT		(16 * 1024)		/* max slab-managed alloc */
+#define ZALLOC_MIN_ZONE_SIZE	(32 * 1024)		/* minimum zone size */
+#define ZALLOC_MAX_ZONE_SIZE	(128 * 1024)	/* maximum zone size */
+#define NZONES					72				/* number of zones */
+#define ZONE_RELEASE_THRESH		2				/* threshold number of zones */
 
-static slab_zone *zone_array[NZONES];   /* linked list of zones NFree > 0 */
-static slab_zone *zone_free;            /* whole zones that have become free */
+static slab_zone *zone_array[NZONES];	/* linked list of zones NFree > 0 */
+static slab_zone *zone_free;			/* whole zones that have become free */
 
 static int zone_free_cnt;
 static int zone_size;
 static int zone_limit;
 static int zone_page_cnt;
 
+#ifdef RT_MEM_STATS
+/* some statistical variable */
+static rt_uint32_t rt_mem_allocated = 0;
+static rt_uint32_t rt_mem_zone = 0;
+static rt_uint32_t rt_mem_page_allocated = 0;
+#endif
+
 /*
  * Misc constants.  Note that allocations that are exact multiples of
  * RT_MM_PAGE_SIZE, or exceed the zone limit, fall through to the kmem module.
  */
-#define MIN_CHUNK_SIZE      8		/* in bytes */
-#define MIN_CHUNK_MASK      (MIN_CHUNK_SIZE - 1)
+#define MIN_CHUNK_SIZE		8		/* in bytes */
+#define MIN_CHUNK_MASK		(MIN_CHUNK_SIZE - 1)
 
 /*
  * Array of descriptors that describe the contents of each page
  */
-#define PAGE_TYPE_FREE      0x00
-#define PAGE_TYPE_SMALL     0x01
-#define PAGE_TYPE_LARGE     0x02
-struct memusage 
-{
+#define PAGE_TYPE_FREE		0x00
+#define PAGE_TYPE_SMALL		0x01
+#define PAGE_TYPE_LARGE		0x02
+struct memusage {
 	rt_uint32_t type:2 ;		/* page type */
-	rt_uint32_t size:30;		/* pages allocated or offset from zone */
+	rt_uint32_t	size:30;		/* pages allocated or offset from zone */
 };
 static struct memusage *memusage = RT_NULL;
 #define btokup(addr)	(&memusage[((rt_uint32_t)(addr) - heap_start) >> RT_MM_PAGE_BITS])
@@ -221,24 +218,21 @@ static rt_uint32_t heap_start, heap_end;
 /* page allocator */
 struct rt_page_head
 {
-	struct rt_page_head *next;      /* next valid page */
-	rt_size_t page;                 /* number of page  */
+	struct rt_page_head *next;		/* next valid page */
+	rt_size_t page;					/* number of page  */
 
 	/* dummy */
 	char dummy[RT_MM_PAGE_SIZE - (sizeof(struct rt_page_head*) + sizeof (rt_size_t))];
 };
 static struct rt_page_head *rt_page_list;
-static struct rt_semaphore heap_sem;
 
-void *rt_page_alloc(rt_size_t npages)
+static void *rt_page_alloc(rt_size_t npages)
 {
 	struct rt_page_head *b, *n;
 	struct rt_page_head **prev;
 
-	if(npages == 0) return RT_NULL;
+	RT_ASSERT(npages != 0);
 
-	/* lock heap */
-	rt_sem_take(&heap_sem, RT_WAITING_FOREVER);
 	for (prev = &rt_page_list; (b = *prev) != RT_NULL; prev = &(b->next))
 	{
 		if (b->page > npages)
@@ -259,13 +253,10 @@ void *rt_page_alloc(rt_size_t npages)
 		}
 	}
 
-	/* unlock heap */
-	rt_sem_release(&heap_sem);
-
 	return b;
 }
 
-void rt_page_free(void *addr, rt_size_t npages)
+static void rt_page_free(void *addr, rt_size_t npages)
 {
 	struct rt_page_head *b, *n;
 	struct rt_page_head **prev;
@@ -275,9 +266,6 @@ void rt_page_free(void *addr, rt_size_t npages)
 	RT_ASSERT(npages != 0);
 
 	n = (struct rt_page_head *)addr;
-
-	/* lock heap */
-	rt_sem_take(&heap_sem, RT_WAITING_FOREVER);
 
 	for (prev = &rt_page_list; (b = *prev) != RT_NULL; prev = &(b->next))
 	{
@@ -292,7 +280,7 @@ void rt_page_free(void *addr, rt_size_t npages)
 				b->next  = b->next->next;
 			}
 
-			goto _return;
+			return;
 		}
 
 		if (b == n + npages)
@@ -301,7 +289,7 @@ void rt_page_free(void *addr, rt_size_t npages)
 			n->next = b->next;
 			*prev = n;
 
-			goto _return;
+			return;
 		}
 
 		if (b > n + npages) break;
@@ -310,16 +298,12 @@ void rt_page_free(void *addr, rt_size_t npages)
 	n->page = npages;
 	n->next = b;
 	*prev = n;
-
-_return:
-	/* unlock heap */
-	rt_sem_release(&heap_sem);
 }
 
 /*
  * Initialize the page allocator
  */
-static void rt_page_init(void *addr, rt_size_t npages)
+static void rt_page_init(void* addr, rt_size_t npages)
 {
 	RT_ASSERT(addr != RT_NULL);
 	RT_ASSERT(npages != 0);
@@ -337,34 +321,29 @@ static void rt_page_init(void *addr, rt_size_t npages)
  * @param end_addr the end address of system page
  *
  */
-void rt_system_heap_init(void *begin_addr, void *end_addr)
+void rt_system_heap_init(void *begin_addr, void* end_addr)
 {
 	rt_uint32_t limsize, npages;
 
-	RT_DEBUG_NOT_IN_INTERRUPT;
-
 	/* align begin and end addr to page */
-	heap_start = RT_ALIGN((rt_uint32_t)begin_addr, RT_MM_PAGE_SIZE);
-	heap_end   = RT_ALIGN_DOWN((rt_uint32_t)end_addr, RT_MM_PAGE_SIZE);
+	heap_start	= RT_ALIGN((rt_uint32_t)begin_addr, RT_MM_PAGE_SIZE);
+	heap_end	= RT_ALIGN_DOWN((rt_uint32_t)end_addr, RT_MM_PAGE_SIZE);
 
-	if (heap_start >= heap_end)
-	{
-		rt_kprintf("rt_system_heap_init, wrong address[0x%x - 0x%x]\n", 
-			(rt_uint32_t)begin_addr, (rt_uint32_t)end_addr);
+	if(heap_start >= heap_end)
+    {
+		rt_kprintf("rt_system_heap_init, error begin address 0x%x, and end address 0x%x\n", (rt_uint32_t)begin_addr, (rt_uint32_t)end_addr);
 		return;
 	}
 	
 	limsize = heap_end - heap_start;
 	npages = limsize / RT_MM_PAGE_SIZE;
 
-	/* initialize heap semaphore */
-	rt_sem_init(&heap_sem, "heap", 1, RT_IPC_FLAG_FIFO);
-
-	RT_DEBUG_LOG(RT_DEBUG_SLAB,
-		("heap[0x%x - 0x%x], size 0x%x, 0x%x pages\n", heap_start, heap_end, limsize, npages));
+#ifdef RT_SLAB_DEBUG
+	rt_kprintf("heap[0x%x - 0x%x], size 0x%x, 0x%x pages\n", heap_start, heap_end, limsize, npages);
+#endif
 
 	/* init pages */
-	rt_page_init((void *)heap_start, npages);
+	rt_page_init((void*)heap_start, npages);
 
 	/* calculate zone size */
 	zone_size = ZALLOC_MIN_ZONE_SIZE;
@@ -376,16 +355,18 @@ void rt_system_heap_init(void *begin_addr, void *end_addr)
 
 	zone_page_cnt = zone_size / RT_MM_PAGE_SIZE;
 
-	RT_DEBUG_LOG(RT_DEBUG_SLAB,
-		("zone size 0x%x, zone page count 0x%x\n", zone_size, zone_page_cnt));
+#ifdef RT_SLAB_DEBUG
+	rt_kprintf("zone size 0x%x, zone page count 0x%x\n", zone_size, zone_page_cnt);
+#endif
 
 	/* allocate memusage array */
 	limsize = npages * sizeof(struct memusage);
 	limsize = RT_ALIGN(limsize, RT_MM_PAGE_SIZE);
 	memusage = rt_page_alloc(limsize/RT_MM_PAGE_SIZE);
 
-	RT_DEBUG_LOG(RT_DEBUG_SLAB,
-		("memusage 0x%x, size 0x%x\n", (rt_uint32_t)memusage, limsize));
+#ifdef RT_SLAB_DEBUG
+	rt_kprintf("memusage 0x%x, size 0x%x\n", (rt_uint32_t)memusage, limsize);
+#endif
 }
 
 /*
@@ -464,14 +445,11 @@ void *rt_malloc(rt_size_t size)
 	slab_zone *z;
 	rt_int32_t zi;
 	slab_chunk *chunk;
+	rt_base_t interrupt_level;
 	struct memusage *kup;
 
 	/* zero size, return RT_NULL */
 	if (size == 0) return RT_NULL;
-
-#ifdef RT_USING_MODULE
-	if (rt_module_self() != RT_NULL) return rt_module_malloc(size);
-#endif
 
 	/*
 	 * Handle large allocations directly.  There should not be very many of
@@ -489,23 +467,17 @@ void *rt_malloc(rt_size_t size)
 		kup->type = PAGE_TYPE_LARGE;
 		kup->size = size >> RT_MM_PAGE_BITS;
 
-		RT_DEBUG_LOG(RT_DEBUG_SLAB, ("malloc a large memory 0x%x, page cnt %d, kup %d\n",
+#ifdef RT_SLAB_DEBUG
+		rt_kprintf("malloc a large memory 0x%x, page cnt %d, kup %d\n",
 			size,
 			size >> RT_MM_PAGE_BITS,
-			((rt_uint32_t)chunk - heap_start) >> RT_MM_PAGE_BITS));
-
-		/* lock heap */
-		rt_sem_take(&heap_sem, RT_WAITING_FOREVER);
-
-#ifdef RT_MEM_STATS
-		used_mem += size;
-		if (used_mem > max_mem) max_mem = used_mem;
+			((rt_uint32_t)chunk - heap_start) >> RT_MM_PAGE_BITS);
 #endif
+
+		/* lock interrupt */
+		interrupt_level = rt_hw_interrupt_disable();
 		goto done;
 	}
-
-	/* lock heap */
-	rt_sem_take(&heap_sem, RT_WAITING_FOREVER);
 
 	/*
 	 * Attempt to allocate out of an existing zone.  First try the free list,
@@ -518,8 +490,11 @@ void *rt_malloc(rt_size_t size)
 	zi = zoneindex(&size);
 	RT_ASSERT(zi < NZONES);
 
-	RT_DEBUG_LOG(RT_DEBUG_SLAB, ("try to malloc 0x%x on zone: %d\n", size, zi));
+#ifdef RT_SLAB_DEBUG
+	rt_kprintf("try to malloc 0x%x on zone: %d\n", size, zi);
+#endif
 
+	interrupt_level = rt_hw_interrupt_disable();
 	if ((z = zone_array[zi]) != RT_NULL)
 	{
 		RT_ASSERT(z->z_nfree > 0);
@@ -551,11 +526,6 @@ void *rt_malloc(rt_size_t size)
 			z->z_freechunk = z->z_freechunk->c_next;
 		}
 
-#ifdef RT_MEM_STATS
-		used_mem += z->z_chunksize;
-		if (used_mem > max_mem) max_mem = used_mem;
-#endif
-
 		goto done;
 	}
 
@@ -574,21 +544,17 @@ void *rt_malloc(rt_size_t size)
 		{
 			/* remove zone from free zone list */
 			zone_free = z->z_next;
-			-- zone_free_cnt;
+			--zone_free_cnt;
 		}
 		else
 		{
-			/* unlock heap, since page allocator will think about lock */
-			rt_sem_release(&heap_sem);
-
 			/* allocate a zone from page */
 			z = rt_page_alloc(zone_size / RT_MM_PAGE_SIZE);
 			if (z == RT_NULL) goto fail;
 
-			/* lock heap */
-			rt_sem_take(&heap_sem, RT_WAITING_FOREVER);
-
-			RT_DEBUG_LOG(RT_DEBUG_SLAB, ("alloc a new zone: 0x%x\n", (rt_uint32_t)z));
+#ifdef RT_SLAB_DEBUG
+			rt_kprintf("alloc a new zone: 0x%x\n", (rt_uint32_t)z);
+#endif
 
 			/* set message usage */
 			for (off = 0, kup = btokup(z); off < zone_page_cnt; off ++)
@@ -615,35 +581,32 @@ void *rt_malloc(rt_size_t size)
 		else
 			off = (off + MIN_CHUNK_MASK) & ~MIN_CHUNK_MASK;
 
-		z->z_magic     = ZALLOC_SLAB_MAGIC;
-		z->z_zoneindex = zi;
-		z->z_nmax      = (zone_size - off) / size;
-		z->z_nfree     = z->z_nmax - 1;
-		z->z_baseptr   = (rt_uint8_t *)z + off;
-		z->z_uindex    = 0;
-		z->z_chunksize = size;
+		z->z_magic = ZALLOC_SLAB_MAGIC;
+		z->z_zoneindex	= zi;
+		z->z_nmax		= (zone_size - off) / size;
+		z->z_nfree		= z->z_nmax - 1;
+		z->z_baseptr	= (rt_uint8_t*)z + off;
+		z->z_uindex		= 0;
+		z->z_chunksize	= size;
 
 		chunk = (slab_chunk *)(z->z_baseptr + z->z_uindex * size);
 
 		/* link to zone array */
 		z->z_next = zone_array[zi];
 		zone_array[zi] = z;
-
-#ifdef RT_MEM_STATS
-		used_mem += z->z_chunksize;
-		if (used_mem > max_mem) max_mem = used_mem;
-#endif
 	}
 
 done:
-	rt_sem_release(&heap_sem);
+	rt_hw_interrupt_enable(interrupt_level);
 
-	RT_OBJECT_HOOK_CALL(rt_malloc_hook, ((char *)chunk, size));
+#ifdef RT_USING_HOOK
+	if (rt_malloc_hook != RT_NULL) rt_malloc_hook((char*)chunk, size);
+#endif
 
 	return chunk;
 
 fail:
-	rt_sem_release(&heap_sem);
+	rt_hw_interrupt_enable(interrupt_level);
 	return RT_NULL;
 }
 
@@ -668,10 +631,6 @@ void *rt_realloc(void *ptr, rt_size_t size)
 		return RT_NULL;
 	}
 
-#ifdef RT_USING_MODULE
-	if (rt_module_self() != RT_NULL) return rt_module_realloc(ptr, size);
-#endif
-
 	/*
 	 * Get the original allocation's zone.  If the new request winds up
 	 * using the same chunk size we do not have to do anything.
@@ -683,14 +642,14 @@ void *rt_realloc(void *ptr, rt_size_t size)
 
 		osize = kup->size << RT_MM_PAGE_BITS;
 		if ((nptr = rt_malloc(size)) == RT_NULL) return RT_NULL;
-		rt_memcpy(nptr, ptr, size > osize ? osize : size);
+		rt_memcpy(nptr, ptr, size > osize? osize : size);
 		rt_free(ptr);
 
 		return nptr;
 	}
 	else if (kup->type == PAGE_TYPE_SMALL)
 	{
-		z = (slab_zone *)(((rt_uint32_t)ptr & ~RT_MM_PAGE_MASK) - kup->size * RT_MM_PAGE_SIZE);
+		z = (slab_zone*)(((rt_uint32_t)ptr & ~RT_MM_PAGE_MASK) - kup->size * RT_MM_PAGE_SIZE);
 		RT_ASSERT(z->z_magic == ZALLOC_SLAB_MAGIC);
 
 		zoneindex(&size);
@@ -703,7 +662,7 @@ void *rt_realloc(void *ptr, rt_size_t size)
 		 */
 		if ((nptr = rt_malloc(size)) == RT_NULL) return RT_NULL;
 
-		rt_memcpy(nptr, ptr, size > z->z_chunksize ? z->z_chunksize : size);
+		rt_memcpy(nptr, ptr, size > z->z_chunksize? z->z_chunksize : size);
 		rt_free(ptr);
 
 		return nptr;
@@ -748,30 +707,22 @@ void rt_free(void *ptr)
 	slab_zone *z;
 	slab_chunk *chunk;
 	struct memusage *kup;
+	rt_base_t interrupt_level;
 
 	/* free a RT_NULL pointer */
 	if (ptr == RT_NULL) return ;
 
-	RT_OBJECT_HOOK_CALL(rt_free_hook, (ptr));
-
-#ifdef RT_USING_MODULE
-	if(rt_module_self() != RT_NULL)
-	{
-		rt_module_free(rt_module_self(), ptr); 
-		return;
-	}
+#ifdef RT_USING_HOOK
+	if (rt_free_hook != RT_NULL) rt_free_hook(ptr);
 #endif
 
 	/* get memory usage */
-#if RT_DEBUG_SLAB
-	{
-		rt_uint32_t addr = ((rt_uint32_t)ptr & ~RT_MM_PAGE_MASK);
-		RT_DEBUG_LOG(RT_DEBUG_SLAB,
-			("free a memory 0x%x and align to 0x%x, kup index %d\n",
-			(rt_uint32_t)ptr,
-			(rt_uint32_t)addr,
-			((rt_uint32_t)(addr) - heap_start) >> RT_MM_PAGE_BITS));
-	}
+#ifdef RT_SLAB_DEBUG
+	rt_uint32 addr = ((rt_uint32_t)ptr & ~RT_MM_PAGE_MASK);
+	rt_kprintf("free a memory 0x%x and align to 0x%x, kup index %d\n",
+		(rt_uint32_t)ptr,
+		(rt_uint32_t)addr,
+		((rt_uint32_t)(addr) - heap_start) >> RT_MM_PAGE_BITS);
 #endif
 
 	kup = btokup((rt_uint32_t)ptr & ~RT_MM_PAGE_MASK);
@@ -780,39 +731,29 @@ void rt_free(void *ptr)
 	{
 		rt_uint32_t size;
 
-		/* lock heap */
-		rt_sem_take(&heap_sem, RT_WAITING_FOREVER);
 		/* clear page counter */
+		interrupt_level = rt_hw_interrupt_disable();
 		size = kup->size;
 		kup->size = 0;
+		rt_hw_interrupt_enable(interrupt_level);
 
-#ifdef RT_MEM_STATS
-		used_mem -= size * RT_MM_PAGE_SIZE;
+#ifdef RT_SLAB_DEBUG
+		rt_kprintf("free large memory block 0x%x, page count %d\n", (rt_uint32_t)ptr, size);
 #endif
-		rt_sem_release(&heap_sem);
-
-		RT_DEBUG_LOG(RT_DEBUG_SLAB,
-			("free large memory block 0x%x, page count %d\n", (rt_uint32_t)ptr, size));
 
 		/* free this page */
 		rt_page_free(ptr, size);
 		return;
 	}
 
-	/* lock heap */
-	rt_sem_take(&heap_sem, RT_WAITING_FOREVER);
-
 	/* zone case. get out zone. */
-	z = (slab_zone *)(((rt_uint32_t)ptr & ~RT_MM_PAGE_MASK) - kup->size * RT_MM_PAGE_SIZE);
+	z = (slab_zone*)(((rt_uint32_t)ptr & ~RT_MM_PAGE_MASK) - kup->size * RT_MM_PAGE_SIZE);
 	RT_ASSERT(z->z_magic == ZALLOC_SLAB_MAGIC);
 
-	chunk = (slab_chunk *)ptr;
+	interrupt_level = rt_hw_interrupt_disable();
+	chunk = (slab_chunk*)ptr;
 	chunk->c_next = z->z_freechunk;
 	z->z_freechunk = chunk;
-
-#ifdef RT_MEM_STATS
-	used_mem -= z->z_chunksize;
-#endif
 
 	/*
 	 * Bump the number of free chunks.  If it becomes non-zero the zone
@@ -830,14 +771,17 @@ void rt_free(void *ptr)
 	 * this code can be called from an IPI callback, do *NOT* try to mess
 	 * with kernel_map here.  Hysteresis will be performed at malloc() time.
 	 */
-	if (z->z_nfree == z->z_nmax && (z->z_next || zone_array[z->z_zoneindex] != z))
+	if (z->z_nfree == z->z_nmax &&
+		(z->z_next || zone_array[z->z_zoneindex] != z))
 	{
 		slab_zone **pz;
 
-		RT_DEBUG_LOG(RT_DEBUG_SLAB, ("free zone 0x%x\n", (rt_uint32_t)z, z->z_zoneindex));
+#ifdef RT_SLAB_DEBUG
+		rt_kprintf("free zone 0x%x\n", (rt_uint32_t)z, z->z_zoneindex);
+#endif
 
 		/* remove zone from zone array list */
-		for (pz = &zone_array[z->z_zoneindex]; z != *pz; pz = &(*pz)->z_next);
+		for (pz = &zone_array[z->z_zoneindex]; z != *pz; pz = &(*pz)->z_next) ;
 		*pz = z->z_next;
 
 		/* reset zone */
@@ -847,7 +791,7 @@ void rt_free(void *ptr)
 		z->z_next = zone_free;
 		zone_free = z;
 
-		++ zone_free_cnt;
+		++zone_free_cnt;
 
 		/* release zone to page allocator */
 		if (zone_free_cnt > ZONE_RELEASE_THRESH)
@@ -856,7 +800,7 @@ void rt_free(void *ptr)
 
 			z = zone_free;
 			zone_free = z->z_next;
-			-- zone_free_cnt;
+			--zone_free_cnt;
 
 			/* set message usage */
 			for (i = 0, kup = btokup(z); i < zone_page_cnt; i ++)
@@ -866,37 +810,12 @@ void rt_free(void *ptr)
 				kup ++;
 			}
 
-			/* unlock heap */
-			rt_sem_release(&heap_sem);
-
 			/* release pages */
-			rt_page_free(z, zone_size / RT_MM_PAGE_SIZE);
-			return;
+			rt_page_free(z, zone_size);
 		}
 	}
-	/* unlock heap */
-	rt_sem_release(&heap_sem);
+	rt_hw_interrupt_enable(interrupt_level);
 }
-
-#ifdef RT_MEM_STATS
-void rt_memory_info(rt_uint32_t *total, rt_uint32_t *used, rt_uint32_t *max_used)
-{
-	if (total != RT_NULL) *total = heap_end - heap_start;
-	if (used  != RT_NULL) *used = used_mem;
-	if (max_used != RT_NULL) *max_used = max_mem;
-}
-
-#ifdef RT_USING_FINSH
-#include <finsh.h>
-void list_mem(void)
-{
-	rt_kprintf("total memory: %d\n", heap_end - heap_start);
-	rt_kprintf("used memory : %d\n", used_mem);
-	rt_kprintf("maximum allocated memory: %d\n", max_mem);
-}
-FINSH_FUNCTION_EXPORT(list_mem, list memory usage information)
-#endif
-#endif
 
 /*@}*/
 

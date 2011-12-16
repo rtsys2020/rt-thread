@@ -12,7 +12,6 @@
  * 2006-03-13     Bernard      first version
  */
 
-#include <rthw.h>
 #include <rtthread.h>
 #include "s3c24x0.h"
 
@@ -181,10 +180,7 @@ void rt_hw_cpu_shutdown()
 	rt_kprintf("shutdown...\n");
 
 	level = rt_hw_interrupt_disable();
-	while (level)
-	{
-		RT_ASSERT(0);
-	}
+	RT_ASSERT(RT_NULL);
 }
 
 /*@}*/

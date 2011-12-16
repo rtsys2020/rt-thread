@@ -21,7 +21,7 @@ extern rt_uint32_t rt_interrupt_nest;
 
 /* exception and interrupt handler table */
 rt_uint32_t rt_interrupt_from_thread, rt_interrupt_to_thread;
-rt_uint32_t rt_thread_switch_interrupt_flag;
+rt_uint32_t rt_thread_switch_interrput_flag;
 
 
 /**
@@ -52,12 +52,13 @@ void rt_hw_interrupt_init()
 		*vect_addr = 0x0;	
 		*vect_cntl = 0xF;
     }
+    
 	
 	/* init interrupt nest, and context in thread sp */
 	rt_interrupt_nest = 0;
 	rt_interrupt_from_thread = 0;
 	rt_interrupt_to_thread = 0;
-	rt_thread_switch_interrupt_flag = 0;
+	rt_thread_switch_interrput_flag = 0;
 }
 
 void rt_hw_interrupt_mask(int vector)
@@ -78,10 +79,6 @@ void rt_hw_interrupt_install(int vector, rt_isr_handler_t new_handler, rt_isr_ha
 	{
 		/* find first un-assigned VIC address for the handler */
 		vect_addr = (rt_uint32_t *)(VIC_BASE_ADDR + 0x100 + vector*4);
-
-		/* get old handler */
-		if (old_handler != RT_NULL) *old_handler = (rt_isr_handler_t)*vect_addr; 
-
 		*vect_addr = (rt_uint32_t)new_handler;	/* set interrupt vector */
 	}
 }

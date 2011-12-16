@@ -4,6 +4,7 @@ Kernel Design & Implementation
 LwIP 1.3.0/1.3.1/1.3.2
 - Porting
   Qiu Yi
+  Ming Bai
 - Testing
   Bernard Xiong
 
@@ -33,7 +34,7 @@ Aozima
 - STM32 Porting
 
 Jing Lee
-- LPC 2478 Porting
+- LPC2478 Porting
 
 Qiu Yi
 - S3C2410 & S3C2440 Porting

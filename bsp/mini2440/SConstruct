@@ -1,39 +1,71 @@
 import os
-import sys
 import rtconfig
 
-if os.getenv('RTT_ROOT'):
-    RTT_ROOT = os.getenv('RTT_ROOT')
-else:
-    RTT_ROOT = os.path.normpath(os.getcwd() + '/../..')
+RTT_ROOT = os.path.normpath(os.getcwd() + '/../..')
+target = 'rtthread-mini2440'
 
-sys.path = sys.path + [os.path.join(RTT_ROOT, 'tools')]
-from building import *
-
-TARGET = 'rtthread-mini2440.' + rtconfig.TARGET_EXT
+# search path for C compiler
+bsp_path  = RTT_ROOT + '/bsp/mini2440'
 
 env = Environment(tools = ['mingw'],
 	AS = rtconfig.AS, ASFLAGS = rtconfig.AFLAGS,
 	CC = rtconfig.CC, CCFLAGS = rtconfig.CFLAGS,
-	CXX = rtconfig.CXX,
 	AR = rtconfig.AR, ARFLAGS = '-rc',
 	LINK = rtconfig.LINK, LINKFLAGS = rtconfig.LFLAGS)
 env.PrependENVPath('PATH', rtconfig.EXEC_PATH)
+env.AppendUnique(CPPPATH = bsp_path)
+projects = []
 
+Export('env')
 Export('RTT_ROOT')
 Export('rtconfig')
+Export('projects')
 
-# prepare building environment
-objs = PrepareBuilding(env, RTT_ROOT)
+objs = SConscript(RTT_ROOT + '/src/SConscript', variant_dir='build/src', duplicate=0)
+objs = objs + SConscript(RTT_ROOT + '/libcpu/SConscript', variant_dir='build/libcpu', duplicate=0)
 
-if GetDepend('RT_USING_RTGUI'):
-    objs = objs + SConscript(RTT_ROOT + '/examples/gui/SConscript', variant_dir='build/examples/gui', duplicate=0)
+if rtconfig.RT_USING_MINILIBC:
+	objs = objs + SConscript(RTT_ROOT + '/libc/minilibc/SConscript', variant_dir='build/minilibc', duplicate=0)
 
-# libc testsuite 
-# objs = objs + SConscript(RTT_ROOT + '/examples/libc/SConscript', variant_dir='build/examples/libc', duplicate=0)
+if rtconfig.RT_USING_FINSH:
+	objs = objs + SConscript(RTT_ROOT + '/finsh/SConscript', variant_dir='build/finsh', duplicate=0)
 
-# build program 
+if rtconfig.RT_USING_DFS:
+	objs = objs + SConscript(RTT_ROOT + '/filesystem/dfs/SConscript', variant_dir='build/filesystem', duplicate=0)
+
+if rtconfig.RT_USING_LWIP:
+	objs = objs + SConscript(RTT_ROOT + '/net/lwip/SConscript', variant_dir='build/net/lwip', duplicate=0)
+	objs = objs + SConscript(RTT_ROOT + '/net/apps/SConscript', variant_dir='build/net/apps', duplicate=0)
+
+if rtconfig.RT_USING_WEBSERVER:
+	objs = objs + SConscript(RTT_ROOT + '/net/webserver/SConscript', variant_dir='build/net/webserver', duplicate=0)
+
+if rtconfig.RT_USING_RTGUI:
+	objs = objs + SConscript(RTT_ROOT + '/rtgui/SConscript', variant_dir='build/rtgui', duplicate=0)
+	objs = objs + SConscript(RTT_ROOT + '/examples/gui/SConscript', variant_dir='build/examples/gui', duplicate=0)
+
+src_bsp = ['application.c', 'startup.c', 'board.c', 'rtc_calendar.c' ]
+src_drv = ['console.c', 'led.c']
+
+if rtconfig.RT_USING_DFS:
+	src_drv += ['sdcard.c']
+
+if rtconfig.RT_USING_LWIP:
+	src_drv += ['dm9000.c']
+
+if rtconfig.RT_USING_RTGUI:
+    src_drv += ['touch.c', 'key.c']
+
+if rtconfig.RT_USING_RTGUI:
+	if rtconfig.RT_USING_LCD_TYPE == 'PNL_A70':
+		src_drv += ['lcd_a70.c']
+	elif rtconfig.RT_USING_LCD_TYPE == 'PNL_N35':
+		src_drv += ['lcd_n35.c']
+	elif rtconfig.RT_USING_LCD_TYPE == 'PNL_T35':
+		src_drv += ['lcd_t35.c']
+
+objs = objs + env.Object(src_bsp + src_drv)
+
+TARGET = target + '.' + rtconfig.TARGET_EXT
 env.Program(TARGET, objs)
-
-# end building 
-EndBuilding(TARGET)
+env.AddPostAction(TARGET, rtconfig.POST_ACTION)

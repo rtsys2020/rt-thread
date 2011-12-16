@@ -1,7 +1,7 @@
 /*
  * File      : object.c
  * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2006 - 2011, RT-Thread Development Team
+ * COPYRIGHT (C) 2006 - 2009, RT-Thread Development Team
  *
  * The license and distribution terms for this file may be
  * found in the file LICENSE in this distribution or at
@@ -14,7 +14,6 @@
  * 2006-05-18     Bernard      fix the object init bug
  * 2006-08-03     Bernard      add hook support
  * 2007-01-28     Bernard      rename RT_OBJECT_Class_Static to RT_Object_Class_Static
- * 2010-10-26     yi.qiu       add module support in rt_object_allocate and rt_object_free
  */
 
 #include <rtthread.h>
@@ -65,11 +64,11 @@ struct rt_object_information rt_object_container[RT_Object_Class_Unknown] =
 };
 
 #ifdef RT_USING_HOOK
-static void (*rt_object_attach_hook)(struct rt_object *object);
-static void (*rt_object_detach_hook)(struct rt_object *object);
-void (*rt_object_trytake_hook)(struct rt_object *object);
-void (*rt_object_take_hook)(struct rt_object *object);
-void (*rt_object_put_hook)(struct rt_object *object);
+static void (*rt_object_attach_hook)(struct rt_object* object);
+static void (*rt_object_detach_hook)(struct rt_object* object);
+void (*rt_object_trytake_hook)(struct rt_object* object);
+void (*rt_object_take_hook)(struct rt_object* object);
+void (*rt_object_put_hook)(struct rt_object* object);
 
 /**
  * @addtogroup Hook
@@ -82,7 +81,7 @@ void (*rt_object_put_hook)(struct rt_object *object);
  *
  * @param hook the hook function
  */
-void rt_object_attach_sethook(void (*hook)(struct rt_object *object))
+void rt_object_attach_sethook(void (*hook)(struct rt_object* object))
 {
 	rt_object_attach_hook = hook;
 }
@@ -93,7 +92,7 @@ void rt_object_attach_sethook(void (*hook)(struct rt_object *object))
  *
  * @param hook the hook function
  */
-void rt_object_detach_sethook(void (*hook)(struct rt_object *object))
+void rt_object_detach_sethook(void (*hook)(struct rt_object* object))
 {
 	rt_object_detach_hook = hook;
 }
@@ -111,7 +110,7 @@ void rt_object_detach_sethook(void (*hook)(struct rt_object *object))
  *
  * @param hook the hook function
  */
-void rt_object_trytake_sethook(void (*hook)(struct rt_object *object))
+void rt_object_trytake_sethook(void (*hook)(struct rt_object* object))
 {
 	rt_object_trytake_hook = hook;
 }
@@ -130,7 +129,7 @@ void rt_object_trytake_sethook(void (*hook)(struct rt_object *object))
  *
  * @param hook the hook function
  */
-void rt_object_take_sethook(void (*hook)(struct rt_object *object))
+void rt_object_take_sethook(void (*hook)(struct rt_object* object))
 {
 	rt_object_take_hook = hook;
 }
@@ -141,7 +140,7 @@ void rt_object_take_sethook(void (*hook)(struct rt_object *object))
  *
  * @param hook the hook function
  */
-void rt_object_put_sethook(void (*hook)(struct rt_object *object))
+void rt_object_put_sethook(void (*hook)(struct rt_object* object))
 {
 	rt_object_put_hook = hook;
 }
@@ -154,8 +153,6 @@ void rt_object_put_sethook(void (*hook)(struct rt_object *object))
  *
  * This function will initialize system object management.
  *
- * @deprecated since 0.3.0, this function does not need to be invoked
- * in the system initialization.
  */
 void rt_system_object_init(void)
 {
@@ -167,36 +164,19 @@ void rt_system_object_init(void)
 /*@{*/
 
 /**
- * This function will return the specified type of object information.
- * 
- * @param type the type of object
- * @return the object type information or RT_NULL
- */
-struct rt_object_information *rt_object_get_information(enum rt_object_class_type type)
-{
-	return &rt_object_container[type];
-}
-
-/**
  * This function will initialize an object and add it to object system management.
  *
  * @param object the specified object to be initialized.
  * @param type the object type.
  * @param name the object name. In system, the object's name must be unique.
  */
-void rt_object_init(struct rt_object *object, enum rt_object_class_type type, const char *name)
+void rt_object_init(struct rt_object* object, enum rt_object_class_type type, const char* name)
 {
 	register rt_base_t temp;
-	struct rt_object_information *information;
+	struct rt_object_information* information;
 
-#ifdef RT_USING_MODULE
-	/* get module object information */
-	information = (rt_module_self() != RT_NULL) ? 
-		&rt_module_self()->module_object[type] : &rt_object_container[type];
-#else
 	/* get object information */
 	information = &rt_object_container[type];
-#endif
 
 	/* initialize object's parameters */
 
@@ -204,9 +184,17 @@ void rt_object_init(struct rt_object *object, enum rt_object_class_type type, co
 	object->type = type | RT_Object_Class_Static;
 
 	/* copy name */
-	rt_strncpy(object->name, name, RT_NAME_MAX);
+	for (temp = 0; temp < RT_NAME_MAX; temp ++)
+	{
+		object->name[temp] = name[temp];
+	}
 
-	RT_OBJECT_HOOK_CALL(rt_object_attach_hook, (object));
+#ifdef RT_USING_HOOK
+	if (rt_object_attach_hook != RT_NULL)
+	{
+		rt_object_attach_hook(object);
+	}
+#endif
 
 	/* lock interrupt */
 	temp = rt_hw_interrupt_disable();
@@ -231,7 +219,9 @@ void rt_object_detach(rt_object_t object)
 	/* object check */
 	RT_ASSERT(object != RT_NULL);
 
-	RT_OBJECT_HOOK_CALL(rt_object_detach_hook, (object));
+#ifdef RT_USING_HOOK
+	if (rt_object_detach_hook != RT_NULL) rt_object_detach_hook(object);
+#endif
 
 	/* lock interrupt */
 	temp = rt_hw_interrupt_disable();
@@ -252,24 +242,16 @@ void rt_object_detach(rt_object_t object)
  *
  * @return object
  */
-rt_object_t rt_object_allocate(enum rt_object_class_type type, const char *name)
+rt_object_t rt_object_allocate(enum rt_object_class_type type, const char* name)
 {
-	struct rt_object *object;
+	struct rt_object* object;
 	register rt_base_t temp;
-	struct rt_object_information *information;
+	struct rt_object_information* information;
 
-	RT_DEBUG_NOT_IN_INTERRUPT;
-
-#ifdef RT_USING_MODULE
-	/* get module object information, module object should be managed by kernel object container */
-	information = (rt_module_self() != RT_NULL && (type != RT_Object_Class_Module)) ? 
-		&rt_module_self()->module_object[type] : &rt_object_container[type];
-#else
 	/* get object information */
 	information = &rt_object_container[type];
-#endif
 
-	object = (struct rt_object *)rt_malloc(information->object_size);
+	object = (struct rt_object*)rt_malloc(information->object_size);
 	if (object == RT_NULL)
 	{
 		/* no memory can be allocated */
@@ -281,21 +263,15 @@ rt_object_t rt_object_allocate(enum rt_object_class_type type, const char *name)
 	/* set object type */
 	object->type = type;
 
-	/* set object flag */
-	object->flag = 0;
-
-#ifdef RT_USING_MODULE
-	if (rt_module_self() != RT_NULL)
-	{
-		object->flag |= RT_OBJECT_FLAG_MODULE;
-	}
-	object->module_id = (void *)rt_module_self();
-#endif
-
 	/* copy name */
-	rt_strncpy(object->name, name, RT_NAME_MAX);
+	for (temp = 0; temp < RT_NAME_MAX; temp ++)
+	{
+		object->name[temp] = name[temp];
+	}
 
-	RT_OBJECT_HOOK_CALL(rt_object_attach_hook, (object));
+#ifdef RT_USING_HOOK
+	if (rt_object_attach_hook != RT_NULL) rt_object_attach_hook(object);
+#endif
 
 	/* lock interrupt */
 	temp = rt_hw_interrupt_disable();
@@ -323,7 +299,9 @@ void rt_object_delete(rt_object_t object)
 	RT_ASSERT(object != RT_NULL);
 	RT_ASSERT(!(object->type & RT_Object_Class_Static));
 
-	RT_OBJECT_HOOK_CALL(rt_object_detach_hook, (object));
+#ifdef RT_USING_HOOK
+	if (rt_object_detach_hook != RT_NULL) rt_object_detach_hook(object);
+#endif
 
 	/* lock interrupt */
 	temp = rt_hw_interrupt_disable();
@@ -333,12 +311,6 @@ void rt_object_delete(rt_object_t object)
 
 	/* unlock interrupt */
 	rt_hw_interrupt_enable(temp);
-
-#if defined(RT_USING_MODULE) && defined(RT_USING_SLAB)
-	if (object->flag & RT_OBJECT_FLAG_MODULE) 
-		rt_module_free((rt_module_t)object->module_id, object);
-	else
-#endif
 
 	/* free the memory of object */
 	rt_free(object);
@@ -364,53 +336,4 @@ rt_err_t rt_object_is_systemobject(rt_object_t object)
 	return -RT_ERROR;
 }
 
-/**
- * This function will find specified name object from object
- * container.
- *
- * @param name the specified name of object.
- * @param type the type of object
- *
- * @return the found object or RT_NULL if there is no this object
- * in object container.
- *
- * @note this function shall not be invoked in interrupt status.
- */
-rt_object_t rt_object_find(const char *name, rt_uint8_t type)
-{
-	struct rt_object *object;
-	struct rt_list_node *node;
-	struct rt_object_information *information;
-	extern volatile rt_uint8_t rt_interrupt_nest;
-
-	/* parameter check */
-	if ((name == RT_NULL) || (type > RT_Object_Class_Unknown))
-		return RT_NULL;
-
-	/* which is invoke in interrupt status */
-	if (rt_interrupt_nest != 0)
-		RT_ASSERT(0);
-
-	/* enter critical */
-	rt_enter_critical();
-
-	/* try to find object */
-	information = &rt_object_container[type];
-	for (node = information->object_list.next; node != &(information->object_list); node = node->next)
-	{
-		object = rt_list_entry(node, struct rt_object, list);
-		if (rt_strncmp(object->name, name, RT_NAME_MAX) == 0)
-		{
-			/* leave critical */
-			rt_exit_critical();
-
-			return (rt_object_t)object;
-		}
-	}
-
-	/* leave critical */
-	rt_exit_critical();
-
-	return RT_NULL;
-}
 /*@}*/

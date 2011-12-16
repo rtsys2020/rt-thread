@@ -15,7 +15,6 @@
 #include <rtthread.h>
 
 #include <s3c24x0.h>
-#include "lcd.h"
 
 /* LCD driver for T3'5 */
 #define LCD_WIDTH 240
@@ -112,11 +111,9 @@
 
 #define	S3C2410_LCDINT_FRSYNC	(1<<1)
 
-volatile rt_uint16_t _rt_framebuffer[RT_HW_LCD_HEIGHT][RT_HW_LCD_WIDTH];
-//volatile rt_uint16_t _rt_hw_framebuffer[RT_HW_LCD_HEIGHT][RT_HW_LCD_WIDTH];
-static struct rt_device_graphic_info _lcd_info;
+volatile rt_uint16_t _rt_hw_framebuffer[RT_HW_LCD_HEIGHT][RT_HW_LCD_WIDTH];
 
-static void lcd_power_enable(int invpwren, int pwren)
+void lcd_power_enable(int invpwren,int pwren)
 {
     //GPG4 is setted as LCD_PWREN
     GPGUP  = GPGUP | (1<<4); // Pull-up disable
@@ -127,7 +124,7 @@ static void lcd_power_enable(int invpwren, int pwren)
     LCDCON5 = LCDCON5&(~(1<<5))|(invpwren<<5);   // INVPWREN
 }
 
-static void lcd_envid_on_off(int onoff)
+void lcd_envid_on_off(int onoff)
 {
 	if(onoff==1)
 		/*ENVID=ON*/
@@ -138,7 +135,7 @@ static void lcd_envid_on_off(int onoff)
 }
 
 //********************** BOARD LCD backlight ****************************
-static void LcdBkLtSet(rt_uint32_t HiRatio)
+void LcdBkLtSet(rt_uint32_t HiRatio)
 {
 #define FREQ_PWM1		1000
 	if(!HiRatio)
@@ -166,9 +163,115 @@ static void LcdBkLtSet(rt_uint32_t HiRatio)
 	TCON = TCON & (~(0xf<<8)) | (0x0d<<8) ;
 }
 
-/* RT-Thread Device Interface */
-static rt_err_t rt_lcd_init (rt_device_t dev)
-{	
+#ifdef RT_USING_RTGUI
+
+#include <rtgui/driver.h>
+#include <rtgui/color.h>
+
+void rt_hw_lcd_update(rtgui_rect_t *rect)
+{
+	/* nothing */
+}
+
+rt_uint8_t * rt_hw_lcd_get_framebuffer(void)
+{
+	return (rt_uint8_t *)_rt_hw_framebuffer;
+}
+
+void rt_hw_lcd_set_pixel(rtgui_color_t *c, rt_base_t x, rt_base_t y)
+{
+    if (x < RT_HW_LCD_WIDTH && y < RT_HW_LCD_HEIGHT)
+	{
+		_rt_hw_framebuffer[(y)][(x)] = rtgui_color_to_565p(*c);
+	}
+}
+
+void rt_hw_lcd_get_pixel(rtgui_color_t *c, rt_base_t x, rt_base_t y)
+{
+    if (x < RT_HW_LCD_WIDTH && y < RT_HW_LCD_HEIGHT)
+	{
+		*c = rtgui_color_from_565p(_rt_hw_framebuffer[(y)][(x)]);
+	}
+
+    return ;
+}
+
+void rt_hw_lcd_draw_hline(rtgui_color_t *c, rt_base_t x1, rt_base_t x2, rt_base_t y)
+{
+	rt_uint32_t idx;
+	rt_uint16_t color;
+
+	/* get color pixel */
+	color = rtgui_color_to_565p(*c);
+
+	for (idx = x1; idx < x2; idx ++)
+	{
+		_rt_hw_framebuffer[y][idx] = color;
+	}
+}
+
+void rt_hw_lcd_draw_vline(rtgui_color_t *c, rt_base_t x, rt_base_t y1, rt_base_t y2)
+{
+    rt_uint32_t idy;
+	rt_uint16_t color;
+
+	/* get color pixel */
+	color = rtgui_color_to_565p(*c);
+
+	for (idy = y1; idy < y2; idy ++)
+	{
+		_rt_hw_framebuffer[idy][x] = color;
+	}
+}
+
+void rt_hw_lcd_draw_raw_hline(rt_uint8_t *pixels, rt_base_t x1, rt_base_t x2, rt_base_t y)
+{
+    rt_memcpy((void*)&_rt_hw_framebuffer[y][x1], pixels, (x2 - x1) * 2);
+}
+
+struct rtgui_graphic_driver _rtgui_lcd_driver =
+{
+	"lcd",
+	2,
+	RT_HW_LCD_WIDTH,
+	RT_HW_LCD_HEIGHT,
+	rt_hw_lcd_update,
+	rt_hw_lcd_get_framebuffer,
+	rt_hw_lcd_set_pixel,
+	rt_hw_lcd_get_pixel,
+	rt_hw_lcd_draw_hline,
+	rt_hw_lcd_draw_vline,
+	rt_hw_lcd_draw_raw_hline
+};
+
+#include "finsh.h"
+void hline(rt_uint32_t c, int x1, int x2, int y)
+{
+    rtgui_color_t color = (rtgui_color_t)c;
+    rt_hw_lcd_draw_hline(&color, x1, x2, y);
+}
+FINSH_FUNCTION_EXPORT(hline, draw a hline);
+
+void vline(rt_uint32_t c, int x, int y1, int y2)
+{
+    rtgui_color_t color = (rtgui_color_t)c;
+    rt_hw_lcd_draw_vline(&color, x, y1, y2);
+}
+FINSH_FUNCTION_EXPORT(vline, draw a vline);
+
+void clear()
+{
+    int y;
+
+    for (y = 0; y < 320; y ++)
+    {
+        rt_hw_lcd_draw_hline((rtgui_color_t*)&white, 0, 240, y);
+    }
+}
+FINSH_FUNCTION_EXPORT(clear, clear screen);
+
+void rt_hw_lcd_init()
+{
 	GPB1_TO_OUT();
 	GPB1_TO_1();
 
@@ -179,20 +282,19 @@ static rt_err_t rt_lcd_init (rt_device_t dev)
 	GPDCON = 0xaaaaaaaa;
 
 #define	M5D(n)	((n)&0x1fffff)
-#define LCD_ADDR ((rt_uint32_t)_rt_framebuffer)
+#define LCD_ADDR ((rt_uint32_t)_rt_hw_framebuffer)
 	LCDCON1 = (LCD_PIXCLOCK << 8) | (3 <<  5) | (12 << 1);
    	LCDCON2 = (LCD_UPPER_MARGIN << 24) | ((LCD_HEIGHT - 1) << 14) | (LCD_LOWER_MARGIN << 6) | (LCD_VSYNC_LEN << 0);
    	LCDCON3 = (LCD_RIGHT_MARGIN << 19) | ((LCD_WIDTH  - 1) <<  8) | (LCD_LEFT_MARGIN << 0);
    	LCDCON4 = (13 <<  8) | (LCD_HSYNC_LEN << 0);
-
 #if !defined(LCD_CON5)
-#define LCD_CON5 ((1<<11) | (1 << 9) | (1 << 8) | (1 << 3) | (1 << 0))
+    #define LCD_CON5 ((1<<11) | (1 << 9) | (1 << 8) | (1 << 3) | (1 << 0))
 #endif
-	LCDCON5   =  LCD_CON5;
+    LCDCON5   =  LCD_CON5;
 
-	LCDSADDR1 = ((LCD_ADDR >> 22) << 21) | ((M5D(LCD_ADDR >> 1)) <<  0);
-	LCDSADDR2 = M5D((LCD_ADDR + LCD_WIDTH * LCD_HEIGHT * 2) >> 1);
-	LCDSADDR3 = LCD_WIDTH;
+    LCDSADDR1 = ((LCD_ADDR >> 22) << 21) | ((M5D(LCD_ADDR >> 1)) <<  0);
+    LCDSADDR2 = M5D((LCD_ADDR + LCD_WIDTH * LCD_HEIGHT * 2) >> 1);
+    LCDSADDR3 = LCD_WIDTH;
 
 	LCDINTMSK |= (3);
 	LPCSEL &= (~7) ;
@@ -202,49 +304,8 @@ static rt_err_t rt_lcd_init (rt_device_t dev)
 	lcd_power_enable(0, 1);
 	lcd_envid_on_off(1);
 
-	return RT_EOK;
+	/* add lcd driver into graphic driver */
+	rtgui_graphic_driver_add(&_rtgui_lcd_driver);
 }
 
-static rt_err_t rt_lcd_control (rt_device_t dev, rt_uint8_t cmd, void *args)
-{
-	switch (cmd)
-	{
-	case RTGRAPHIC_CTRL_RECT_UPDATE:
-		break;
-	case RTGRAPHIC_CTRL_POWERON:
-		break;
-	case RTGRAPHIC_CTRL_POWEROFF:
-		break;
-	case RTGRAPHIC_CTRL_GET_INFO:		
-		rt_memcpy(args, &_lcd_info, sizeof(_lcd_info));
-		break;
-	case RTGRAPHIC_CTRL_SET_MODE:
-		break;
-	}
-
-	return RT_EOK;
-}
-
-void rt_hw_lcd_init(void)
-{
-	rt_device_t lcd = rt_malloc(sizeof(struct rt_device));
-	if (lcd == RT_NULL) return; /* no memory yet */
-
-	_lcd_info.bits_per_pixel = 16;
-	_lcd_info.pixel_format = RTGRAPHIC_PIXEL_FORMAT_RGB565P;
-	_lcd_info.framebuffer = (void*)_rt_framebuffer;
-	_lcd_info.width = LCD_WIDTH;
-	_lcd_info.height = LCD_HEIGHT;
-
-	/* init device structure */
-	lcd->type = RT_Device_Class_Unknown;
-	lcd->init = rt_lcd_init;
-	lcd->open = RT_NULL;
-	lcd->close = RT_NULL;
-	lcd->control = rt_lcd_control;
-	lcd->user_data = (void*)&_lcd_info;
-	
-	/* register lcd device to RT-Thread */
-	rt_device_register(lcd, "lcd", RT_DEVICE_FLAG_RDWR);
-}
-
+#endif

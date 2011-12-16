@@ -131,17 +131,17 @@ extern "C" {
 
 // NAND flash
 #define NFCONF     (*(volatile unsigned *)0x4e000000)      //NAND Flash configuration
-#define NFCMD      (*(volatile unsigned *)0x4e000004)            //NADD Flash command
-#define NFADDR     (*(volatile unsigned *)0x4e000008)            //NAND Flash address
-#define NFDATA     (*(volatile unsigned *)0x4e00000c)            //NAND Flash data
+#define NFCMD      (*(volatile U8 *)0x4e000004)            //NADD Flash command
+#define NFADDR     (*(volatile U8 *)0x4e000008)            //NAND Flash address
+#define NFDATA     (*(volatile U8 *)0x4e00000c)            //NAND Flash data
 #define NFSTAT     (*(volatile unsigned *)0x4e000010)      //NAND Flash operation status
 #define NFECC      (*(volatile unsigned *)0x4e000014)      //NAND Flash ECC
-#define NFECC0     (*(volatile unsigned *)0x4e000014)
-#define NFECC1     (*(volatile unsigned *)0x4e000015)
-#define NFECC2     (*(volatile unsigned *)0x4e000016)
+#define NFECC0     (*(volatile U8  *)0x4e000014)
+#define NFECC1     (*(volatile U8  *)0x4e000015)
+#define NFECC2     (*(volatile U8  *)0x4e000016)
 
 // UART
-#define U0BASE     (*(volatile unsigned *)0x50000000) //UART 0 Line control
+#define U0BASE     (volatile unsigned *)0x50000000 //UART 0 Line control
 #define ULCON0     (*(volatile unsigned *)0x50000000) //UART 0 Line control
 #define UCON0      (*(volatile unsigned *)0x50000004) //UART 0 Control
 #define UFCON0     (*(volatile unsigned *)0x50000008) //UART 0 FIFO control
@@ -152,7 +152,7 @@ extern "C" {
 #define UMSTAT0    (*(volatile unsigned *)0x5000001c) //UART 0 Modem status
 #define UBRD0    (*(volatile unsigned *)0x50000028) //UART 0 Baud ate divisor
 
-#define U1BASE     (*(volatile unsigned *)0x50004000) //UART 1 Line control
+#define U1BASE     *(volatile unsigned *)0x50004000 //UART 1 Line control
 #define ULCON1     (*(volatile unsigned *)0x50004000) //UART 1 Line control
 #define UCON1      (*(volatile unsigned *)0x50004004) //UART 1 Control
 #define UFCON1     (*(volatile unsigned *)0x50004008) //UART 1 FIFO control

@@ -38,8 +38,6 @@ extern void rt_application_init(void);
 
 extern struct serial_device uart0;
 extern struct rt_device uart0_device;
-extern struct serial_device uart2;
-extern struct rt_device uart2_device;
 
 /**
  * @addtogroup mini2440
@@ -55,9 +53,28 @@ extern struct rt_device uart2_device;
 	rt_uint8_t _fiq_stack_start[1024];
 	rt_uint8_t _undefined_stack_start[512];
 	rt_uint8_t _abort_stack_start[512];
-	rt_uint8_t _svc_stack_start[4096] SECTION(".nobss");
-	extern unsigned char __bss_start;
-	extern unsigned char __bss_end;
+	rt_uint8_t _svc_stack_start[1024] SECTION(".nobss");
+	extern int __bss_end;
+#endif
+
+/**
+ * Fix me 
+ */
+ #if (defined (__GNUC__))
+void *_sbrk (int incr)
+{ 
+	extern int   __bss_end; /* Set by linker.  */
+	static char * heap_end; 
+	char *        prev_heap_end; 
+
+	if (heap_end == 0)
+	 heap_end = & __bss_end; 
+
+	prev_heap_end = heap_end; 
+	heap_end += incr; 
+
+	return (void *) prev_heap_end; 
+} 
 #endif
 
 #ifdef RT_USING_FINSH
@@ -81,7 +98,7 @@ void rtthread_startup(void)
 
 	/* show version */
 	rt_show_version();
-
+	
 	/* init tick */
 	rt_system_tick_init();
 
@@ -93,35 +110,22 @@ void rtthread_startup(void)
 
 	/* init heap memory system */
 #ifdef __CC_ARM
-	rt_system_heap_init((void*)&Image$$ER_ZI$$ZI$$Limit, (void*)0x33F00000);
+	rt_system_heap_init((void*)&Image$$ER_ZI$$ZI$$Limit, (void*)0x34000000);
 #else
-	rt_system_heap_init((void*)&__bss_end, (void*)0x33F00000);
-#endif
-
-#ifdef RT_USING_MODULE
-	/* init module system*/
-	rt_system_module_init();
+	rt_system_heap_init(&__bss_end, (void*)0x34000000);
 #endif
 
 	/* init scheduler system */
 	rt_system_scheduler_init();
 
 #ifdef RT_USING_DEVICE
-	/* register uart0 */
+	/* register uart1 */
 	rt_hw_serial_register(&uart0_device, "uart0",
 		RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_INT_RX | RT_DEVICE_FLAG_STREAM,
 		&uart0);
 
-	/* register uart2, used for RTI debug */
-	rt_hw_serial_register(&uart2_device, "uart2",
-		RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_INT_RX | RT_DEVICE_FLAG_STREAM,
-		&uart2);
-
 #ifdef RT_USING_DFS
 	rt_hw_sdcard_init();
-#ifdef RT_USING_DFS_UFFS
-	rt_hw_nand_init();
-#endif
 #endif
 
 	/* rtc init */
@@ -142,8 +146,6 @@ void rtthread_startup(void)
 #endif
 #endif
 
-	rt_system_timer_thread_init();
-
 	/* init idle thread */
 	rt_thread_idle_init();
 
@@ -156,8 +158,10 @@ void rtthread_startup(void)
 
 int main(void)
 {
+	rt_uint32_t UNUSED level;
+
 	/* disable interrupt first */
-	rt_hw_interrupt_disable();
+	level = rt_hw_interrupt_disable();
 
 	/* startup RT-Thread RTOS */
 	rtthread_startup();

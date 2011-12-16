@@ -50,22 +50,19 @@ rt_hw_context_switch	PROC
 	STMFD	sp!, {r0-r12, lr}	; push lr & register file
 
 	MRS		r4, cpsr
-	TST     lr, #0x01
-	BEQ     _ARM_MODE
-	ORR     r4, r4, #0x20       ; it's thumb code
-
-_ARM_MODE
 	STMFD	sp!, {r4}			; push cpsr
+	MRS		r4, spsr
+	STMFD	sp!, {r4}			; push spsr
 
-	STR	    sp, [r0]			; store sp in preempted tasks TCB
-	LDR	    sp, [r1]			; get new task stack pointer
+	STR	sp, [r0]				; store sp in preempted tasks TCB
+	LDR	sp, [r1]				; get new task stack pointer
 
-	LDMFD	sp!, {r4}			; pop new task cpsr to spsr
-	MSR     spsr_cxsf, r4
-	BIC     r4, r4, #0x20       ; must be ARM mode
-	MSR	    cpsr_cxsf, r4
+	LDMFD	sp!, {r4}			; pop new task spsr
+	MSR	spsr_cxsf, r4
+	LDMFD	sp!, {r4}			; pop new task cpsr
+	MSR	cpsr_cxsf, r4
 
-	LDMFD	sp!, {r0-r12, lr, pc}^	; pop new task r0-r12, lr & pc, copy spsr to cpsr
+	LDMFD	sp!, {r0-r12, lr, pc}	; pop new task r0-r12, lr & pc
 	ENDP
 
 ;/*
@@ -76,28 +73,28 @@ rt_hw_context_switch_to	PROC
 	EXPORT rt_hw_context_switch_to
 	LDR	sp, [r0]				; get new task stack pointer
 
-	LDMFD	sp!, {r4}			; pop new task cpsr to spsr
-	MSR	    spsr_cxsf, r4
-	BIC     r4, r4, #0x20       ; must be ARM mode
-	MSR	    cpsr_cxsf, r4
+	LDMFD	sp!, {r4}			; pop new task spsr
+	MSR	spsr_cxsf, r4
+	LDMFD	sp!, {r4}			; pop new task cpsr
+	MSR	cpsr_cxsf, r4
 
-	LDMFD	sp!, {r0-r12, lr, pc}^	; pop new task r0-r12, lr & pc, copy spsr to cpsr
+	LDMFD	sp!, {r0-r12, lr, pc}	; pop new task r0-r12, lr & pc
 	ENDP
 
 ;/*
 ; * void rt_hw_context_switch_interrupt(rt_uint32 from, rt_uint32 to);
 ; */
-	IMPORT rt_thread_switch_interrupt_flag
+	IMPORT rt_thread_switch_interrput_flag
 	IMPORT rt_interrupt_from_thread
 	IMPORT rt_interrupt_to_thread
 
 rt_hw_context_switch_interrupt	PROC
 	EXPORT rt_hw_context_switch_interrupt
-	LDR r2, =rt_thread_switch_interrupt_flag
+	LDR r2, =rt_thread_switch_interrput_flag
 	LDR r3, [r2]
 	CMP r3, #1
 	BEQ _reswitch
-	MOV r3, #1							; set rt_thread_switch_interrupt_flag to 1
+	MOV r3, #1							; set rt_thread_switch_interrput_flag to 1
 	STR r3, [r2]
 	LDR r2, =rt_interrupt_from_thread	; set rt_interrupt_from_thread
 	STR r0, [r2]

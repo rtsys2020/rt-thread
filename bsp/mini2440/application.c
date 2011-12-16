@@ -18,11 +18,9 @@
  */
 /*@{*/
 
+#include <board.h>
 #include <rtthread.h>
-#include "touch.h"
-#include "lcd.h"
 #include "led.h"
-#include "dm9000.h"
 
 #ifdef RT_USING_DFS
 /* dfs init */
@@ -31,10 +29,6 @@
 #include <dfs_elm.h>
 /* dfs Filesystem APIs */
 #include <dfs_fs.h>
-#ifdef RT_USING_DFS_UFFS
-/* dfs filesystem:UFFS filesystem init */
-#include <dfs_uffs.h>
-#endif
 #endif
 
 #ifdef RT_USING_LWIP
@@ -42,33 +36,8 @@
 #endif
 
 #ifdef RT_USING_RTGUI
-#include <rtgui/rtgui.h>
-extern void rt_hw_touch_init(void);
-#endif
-
-#ifdef RT_USING_FTK
-#include "ftk.h"
-#endif
-
-#define RT_INIT_THREAD_STACK_SIZE (2*1024)
-
-#ifdef RT_USING_DFS_ROMFS
-#include <dfs_romfs.h>
-#endif
-
-#ifdef RT_USING_FTK
-static int argc = 1;
-static char* argv[] = {"ftk", NULL};
-
-void rt_ftk_thread_entry(void* parameter)
-{
-	int FTK_MAIN(int argc, char* argv[]);
-
-	FTK_MAIN(argc, argv);
-
-	return;
-}
-
+extern void rt_hw_lcd_init(void);
+extern void rt_hw_key_init(void);
 #endif
 
 void rt_init_thread_entry(void* parameter)
@@ -82,6 +51,7 @@ void rt_init_thread_entry(void* parameter)
 #if defined(RT_USING_DFS_ELMFAT)
 		/* init the elm chan FatFs filesystam*/
 		elm_init();
+
 		/* mount sd card fat partition 1 as root directory */
 		if (dfs_mount("sd0", "/", "elm", 0, 0) == 0)
 		{
@@ -90,77 +60,6 @@ void rt_init_thread_entry(void* parameter)
 		else
 			rt_kprintf("File System initialzation failed!\n");
 #endif
-
-#if defined(RT_USING_DFS_ROMFS)
-		dfs_romfs_init();
-		if (dfs_mount(RT_NULL, "/rom", "rom", 0, &romfs_root) == 0)
-		{
-			rt_kprintf("ROM File System initialized!\n");
-		}
-		else
-			rt_kprintf("ROM File System initialzation failed!\n");
-#endif
-
-#if defined(RT_USING_DFS_DEVFS)
-		devfs_init();
-		if (dfs_mount(RT_NULL, "/dev", "devfs", 0, 0) == 0)
-			rt_kprintf("Device File System initialized!\n");
-		else
-			rt_kprintf("Device File System initialzation failed!\n");
-
-		#ifdef RT_USING_NEWLIB
-		/* init libc */
-		libc_system_init("uart0");
-		#endif
-#endif
-
-#if defined(RT_USING_DFS) && defined(RT_USING_LWIP) && defined(RT_USING_DFS_NFS)
-		/* NFSv3 Initialization */
-		nfs_init();
-
-		if (dfs_mount(RT_NULL, "/nfs", "nfs", 0, RT_NFS_HOST_EXPORT) == 0)
-			rt_kprintf("NFSv3 File System initialized!\n");
-		else
-			rt_kprintf("NFSv3 File System initialzation failed!\n");
-#endif
-
-#if defined(RT_USING_DFS_UFFS)
-		/* init the uffs filesystem */
-		dfs_uffs_init();
-
-		/* mount flash device as flash directory */
-		if(dfs_mount("nand0", "/nand0", "uffs", 0, 0) == 0)
-			rt_kprintf("UFFS File System initialized!\n");
-		else
-			rt_kprintf("UFFS File System initialzation failed!\n");
-#endif
-	}
-#endif
-
-#ifdef RT_USING_RTGUI
-	{
-		rt_device_t lcd;
-		
-		/* init lcd */
-		rt_hw_lcd_init();
-			
-		/* init touch panel */
-		rtgui_touch_hw_init();	
-
-		/* init keypad */
-		rt_hw_key_init();
-		
-		/* re-init device driver */
-		rt_device_init_all();
-
-		/* find lcd device */
-		lcd = rt_device_find("lcd");
-
-		/* set lcd device as rtgui graphic driver */		
-		rtgui_graphic_set_device(lcd);
-
-		/* startup rtgui */
-		rtgui_startup();
 	}
 #endif
 
@@ -182,30 +81,10 @@ void rt_init_thread_entry(void* parameter)
 	}
 #endif
 
-#ifdef RT_USING_FTK
+#ifdef RT_USING_RTGUI
 	{
-		rt_thread_t ftk_thread;
-
-		/* init lcd */
-		rt_hw_lcd_init();
-
-		/* init touch panel */
-		rtgui_touch_hw_init();	
-
-		/* init keypad */
-		rt_hw_key_init();
-
-		/* re-init device driver */
-		rt_device_init_all();
-
-		/* create ftk thread */
-		ftk_thread = rt_thread_create("ftk",
-									rt_ftk_thread_entry, RT_NULL,
-									10 * 1024, 8, 20);	
-
-		/* startup ftk thread */
-		if(ftk_thread != RT_NULL)
-			rt_thread_startup(ftk_thread);		
+		rt_hw_touch_init();
+		rtgui_startup();
 	}
 #endif
 }
@@ -223,8 +102,10 @@ void rt_led_thread_entry(void* parameter)
 		rt_hw_led_off(LED2|LED3);
 		rt_hw_led_on(LED1|LED4);
 		rt_thread_delay(100);
+
 	}
 }
+
 
 int rt_application_init()
 {
@@ -234,7 +115,7 @@ int rt_application_init()
 #if (RT_THREAD_PRIORITY_MAX == 32)
 	init_thread = rt_thread_create("init",
 								rt_init_thread_entry, RT_NULL,
-								RT_INIT_THREAD_STACK_SIZE, 8, 20);
+								2048, 8, 20);
 
 	led_thread = rt_thread_create("led",
 								rt_led_thread_entry, RT_NULL,
@@ -242,7 +123,7 @@ int rt_application_init()
 #else
 	init_thread = rt_thread_create("init",
 								rt_init_thread_entry, RT_NULL,
-								RT_INIT_THREAD_STACK_SIZE, 80, 20);
+								2048, 80, 20);
 
 	led_thread = rt_thread_create("led",
 								rt_led_thread_entry, RT_NULL,

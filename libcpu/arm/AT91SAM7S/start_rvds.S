@@ -393,9 +393,8 @@ MC_RCR  EQU     0x00            ; MC_RCR Offset
 
                 ELSE
 
-                ; No usr mode stack here.
-                ;MOV     SP, R0
-                ;SUB     SL, SP, #USR_Stack_Size
+                MOV     SP, R0
+                SUB     SL, SP, #USR_Stack_Size
 
                 ENDIF
 
@@ -408,7 +407,7 @@ MC_RCR  EQU     0x00            ; MC_RCR Offset
 
 				IMPORT rt_interrupt_enter
 				IMPORT rt_interrupt_leave
-				IMPORT rt_thread_switch_interrupt_flag
+				IMPORT rt_thread_switch_interrput_flag
 				IMPORT rt_interrupt_from_thread
 				IMPORT rt_interrupt_to_thread
 				IMPORT rt_hw_trap_irq
@@ -420,9 +419,9 @@ IRQ_Handler		PROC
 				BL	rt_hw_trap_irq
 				BL	rt_interrupt_leave
 
-				; if rt_thread_switch_interrupt_flag set, jump to
+				; if rt_thread_switch_interrput_flag set, jump to
 				; rt_hw_context_switch_interrupt_do and don't return
-				LDR	r0, =rt_thread_switch_interrupt_flag
+				LDR	r0, =rt_thread_switch_interrput_flag
 				LDR	r1, [r0]
 				CMP	r1, #1
 				BEQ	rt_hw_context_switch_interrupt_do
@@ -490,7 +489,7 @@ rt_hw_context_switch_interrupt_do	PROC
 __user_initial_stackheap
 
                 LDR     R0, =  Heap_Mem
-                LDR     R1, = (Stack_Mem + IRQ_Stack_Size)
+                LDR     R1, =(Stack_Mem + USR_Stack_Size)
                 LDR     R2, = (Heap_Mem +      Heap_Size)
                 LDR     R3, = Stack_Mem
                 BX      LR

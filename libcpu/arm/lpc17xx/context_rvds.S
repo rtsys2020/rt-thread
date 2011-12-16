@@ -28,10 +28,9 @@ NVIC_PENDSVSET  EQU     0x10000000               ; value to trigger PendSV excep
 	REQUIRE8
 	PRESERVE8
 
-	IMPORT rt_thread_switch_interrupt_flag
+	IMPORT rt_thread_switch_interrput_flag
 	IMPORT rt_interrupt_from_thread
 	IMPORT rt_interrupt_to_thread
-	IMPORT rt_hw_hard_fault_exception
 
 ;/*
 ; * rt_base_t rt_hw_interrupt_disable();
@@ -62,8 +61,8 @@ rt_hw_context_switch_interrupt
 rt_hw_context_switch    PROC
 	EXPORT rt_hw_context_switch
 
-	; set rt_thread_switch_interrupt_flag to 1
-	LDR 	r2, =rt_thread_switch_interrupt_flag
+	; set rt_thread_switch_interrput_flag to 1
+	LDR 	r2, =rt_thread_switch_interrput_flag
 	LDR 	r3, [r2]
 	CMP 	r3, #1
 	BEQ 	_reswitch
@@ -86,19 +85,19 @@ _reswitch
 ; r0 --> swith from thread stack
 ; r1 --> swith to thread stack
 ; psr, pc, lr, r12, r3, r2, r1, r0 are pushed into [from] stack
-PendSV_Handler	PROC
-	EXPORT PendSV_Handler
+rt_hw_pend_sv	PROC
+	EXPORT rt_hw_pend_sv
 
 	; disable interrupt to protect context switch
 	MRS		r2, PRIMASK
 	CPSID   I
 
 	; get rt_thread_switch_interrupt_flag
-	LDR		r0, =rt_thread_switch_interrupt_flag
+	LDR		r0, =rt_thread_switch_interrput_flag
 	LDR		r1, [r0]
 	CBZ		r1, pendsv_exit			; pendsv already handled
 
-	; clear rt_thread_switch_interrupt_flag to 0
+	; clear rt_thread_switch_interrput_flag to 0
 	MOV		r1, #0x00
 	STR		r1, [r0]
 
@@ -144,16 +143,14 @@ rt_hw_context_switch_to    PROC
 	STR		r0, [r1]
 
 	; set interrupt flag to 1
-	LDR 	r1, =rt_thread_switch_interrupt_flag
+	LDR 	r1, =rt_thread_switch_interrput_flag
 	MOV 	r0, #1
 	STR 	r0, [r1]
 
 	; set the PendSV exception priority
     LDR     r0, =NVIC_SYSPRI2
     LDR     r1, =NVIC_PENDSV_PRI
-	LDR.W   R2, [r0,#0x00]          ; read
-	ORR     r1,r1,r2                ; modify
-    STR     r1, [r0]                ; write-bak
+    STR     r1, [r0]
 
 	; trigger the PendSV exception (causes context switch)
     LDR     r0, =NVIC_INT_CTRL
@@ -172,18 +169,5 @@ rt_hw_interrupt_thread_switch PROC
 	BX		lr
 	NOP
 	ENDP
-
-HardFault_Handler    PROC
-    EXPORT HardFault_Handler
-
-    ; get current context
-    MRS     r0, psp                 ; get fault thread stack pointer
-    PUSH    {lr}
-    BL      rt_hw_hard_fault_exception
-    POP     {lr}
-
-    ORR     lr, lr, #0x04
-    BX      lr
-    ENDP
 
 	END

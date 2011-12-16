@@ -3,7 +3,7 @@
 #define __RTTHREAD_CFG_H__
 
 /* RT_NAME_MAX*/
-#define RT_NAME_MAX	32
+#define RT_NAME_MAX	8
 
 /* RT_ALIGN_SIZE*/
 #define RT_ALIGN_SIZE	4
@@ -16,7 +16,7 @@
 
 /* SECTION: RT_DEBUG */
 /* Thread Debug */
-/* #define RT_DEBUG */
+#define RT_DEBUG
 /* #define RT_THREAD_DEBUG */
 
 #define RT_USING_OVERFLOW_CHECK
@@ -63,27 +63,19 @@
 /* Using Device System */
 #define RT_USING_DEVICE
 
-/* Using Module System */
-#define RT_USING_MODULE
-#define RT_USING_LIBDL
-
 /* SECTION: Console options */
-#define RT_USING_CONSOLE
 /* the buffer size of console */
 #define RT_CONSOLEBUF_SIZE	128
 
 /* SECTION: finsh, a C-Express shell */
 /* Using FinSH as Shell*/
 #define RT_USING_FINSH
-/* Using symbol table */
-#define FINSH_USING_SYMTAB
-#define FINSH_USING_DESCRIPTION
-#define FINSH_THREAD_STACK_SIZE 4096
 
 /* SECTION: a runtime libc library */
 /* a runtime libc library */
-#define RT_USING_NEWLIB
-#define RT_USING_PTHREADS
+/* #define RT_USING_NEWLIB */
+
+/* SECTION: a mini libc */
 
 /* SECTION: C++ support */
 /* Using C++ support */
@@ -92,33 +84,21 @@
 /* SECTION: Device filesystem support */
 /* using DFS support */
 #define RT_USING_DFS
-#define RT_USING_DFS_ELMFAT
-/* use long file name feature 			*/
-#define RT_DFS_ELM_USE_LFN			1
-/* the max number of file length 		*/
-#define RT_DFS_ELM_MAX_LFN		128
+#define RT_USING_DFS_ELMFATFS
 /* #define RT_USING_DFS_YAFFS2 */
-/* #define RT_USING_DFS_UFFS */
-#define RT_USING_DFS_DEVFS
 
-/* #define RT_USING_DFS_NFS */
-#define RT_NFS_HOST_EXPORT		"192.168.1.5:/"
-
-#define DFS_USING_WORKDIR
+/* #define DFS_USING_WORKDIR */
 
 /* the max number of mounted filesystem */
-#define DFS_FILESYSTEMS_MAX		4
+#define DFS_FILESYSTEMS_MAX		2
 /* the max number of opened files 		*/
 #define DFS_FD_MAX					16
 /* the max number of cached sector 		*/
 #define DFS_CACHE_MAX_NUM   		4
 
-/* Enable freemodbus protocal stack*/
-/* #define RT_USING_MODBUS */
-
 /* SECTION: lwip, a lighwight TCP/IP protocol stack */
 /* Using lighweight TCP/IP protocol stack */
-/* #define RT_USING_LWIP */
+#define RT_USING_LWIP
 #define RT_LWIP_DNS
 
 /* Trace LwIP protocol */
@@ -140,10 +120,10 @@
 #define RT_LWIP_TCP_PCB_NUM	5
 
 /* TCP sender buffer space */
-#define RT_LWIP_TCP_SND_BUF	1024*8
+#define RT_LWIP_TCP_SND_BUF	1024*10
 
 /* TCP receive window. */
-#define RT_LWIP_TCP_WND	1024*8
+#define RT_LWIP_TCP_WND	1024
 
 /* Enable SNMP protocol */
 /* #define RT_LWIP_SNMP */
@@ -174,14 +154,11 @@
 /* the number of blocks for pbuf */
 #define RT_LWIP_PBUF_NUM	16
 
-/* the number of simultaneously queued TCP */
-#define RT_LWIP_TCP_SEG_NUM    40
-
 /* thread priority of tcpip thread */
 #define RT_LWIP_TCPTHREAD_PRIORITY	128
 
 /* mail box size of tcpip thread to wait for */
-#define RT_LWIP_TCPTHREAD_MBOX_SIZE	32
+#define RT_LWIP_TCPTHREAD_MBOX_SIZE	8
 
 /* thread stack size of tcpip thread */
 #define RT_LWIP_TCPTHREAD_STACKSIZE	4096
@@ -217,25 +194,5 @@
 /* #define RTGUI_USING_SMALL_SIZE */
 /* use mouse cursor */
 /* #define RTGUI_USING_MOUSE_CURSOR */
-/* RTGUI image options */
-#define RTGUI_IMAGE_XPM
-#define RTGUI_IMAGE_JPEG
-#define RTGUI_IMAGE_PNG
-#define RTGUI_IMAGE_BMP
-
-/* SECTION: FTK support */
-/* using FTK support */
-/* #define RT_USING_FTK */
-
-/*
- * Note on FTK:
- * 
- * FTK depends :
- * #define RT_USING_NEWLIB
- * #define DFS_USING_WORKDIR
- * 
- * And the maximal length must great than 64
- * #define RT_DFS_ELM_MAX_LFN	128
- */
 
 #endif

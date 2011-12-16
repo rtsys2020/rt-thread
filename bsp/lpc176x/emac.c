@@ -19,8 +19,7 @@ struct lpc17xx_emac
 	rt_uint8_t  dev_addr[MAX_ADDR_LEN];		/* hw address	*/
 };
 static struct lpc17xx_emac lpc17xx_emac_device;
-static struct rt_semaphore sem_lock;
-static struct rt_event tx_event;
+static struct rt_semaphore sem_slot, sem_lock;
 
 /* Local Function Prototypes */
 static void write_PHY (rt_uint32_t PhyReg, rt_uint32_t Value);
@@ -33,8 +32,11 @@ void ENET_IRQHandler(void)
     /* enter interrupt */
     rt_interrupt_enter();
 
-	status = LPC_EMAC->IntStatus;
+	status = LPC_EMAC->IntStatus & LPC_EMAC->IntEnable;
 
+	/* Clear the interrupt. */ 
+	LPC_EMAC->IntClear = status; 
+ 
 	if (status & INT_RX_DONE)
 	{
 		/* Disable EMAC RxDone interrupts. */
@@ -45,23 +47,10 @@ void ENET_IRQHandler(void)
 	}
 	else if (status & INT_TX_DONE)
 	{
-		/* set event */
-		rt_event_send(&tx_event, 0x01);
+		/* release one slot */
+		rt_sem_release(&sem_slot);
 	}
 
-	if (status & INT_RX_OVERRUN)
-	{
-		rt_kprintf("rx overrun\n");
-	}
-
-	if (status & INT_TX_UNDERRUN)
-	{
-		rt_kprintf("tx underrun\n");
-	}
-
-	/* Clear the interrupt. */ 
-	LPC_EMAC->IntClear = status; 
- 
     /* leave interrupt */
     rt_interrupt_leave();
 }
@@ -355,22 +344,8 @@ rt_err_t lpc17xx_emac_tx( rt_device_t dev, struct pbuf* p)
 	struct pbuf *q;
 	rt_uint8_t *ptr;
 
-	/* calculate next index */
-	IndexNext = LPC_EMAC->TxProduceIndex + 1;
-	if(IndexNext > LPC_EMAC->TxDescriptorNumber) IndexNext = 0;
-
-	/* check whether block is full */
-	while (IndexNext == LPC_EMAC->TxConsumeIndex)
-	{
-		rt_err_t result;
-		rt_uint32_t recved;
-		
-		/* there is no block yet, wait a flag */
-		result = rt_event_recv(&tx_event, 0x01, 
-			RT_EVENT_FLAG_AND | RT_EVENT_FLAG_CLEAR, RT_WAITING_FOREVER, &recved);
-
-		RT_ASSERT(result == RT_EOK);
-	}
+	/* take a slot */
+	rt_sem_take(&sem_slot, RT_WAITING_FOREVER);
 
 	/* lock EMAC device */
 	rt_sem_take(&sem_lock, RT_WAITING_FOREVER);
@@ -460,20 +435,19 @@ struct pbuf *lpc17xx_emac_rx(rt_device_t dev)
 
 void lpc17xx_emac_hw_init(void)
 {
-	rt_event_init(&tx_event, "tx_event", RT_IPC_FLAG_FIFO);
+	rt_sem_init(&sem_slot, "tx_slot", NUM_TX_FRAG, RT_IPC_FLAG_FIFO);
 	rt_sem_init(&sem_lock, "eth_lock", 1, RT_IPC_FLAG_FIFO);
 
 	/* set autonegotiation mode */
 	lpc17xx_emac_device.phy_mode = EMAC_PHY_AUTO;
 
-	// OUI 00-60-37 NXP Semiconductors
-	lpc17xx_emac_device.dev_addr[0] = 0x00;
-	lpc17xx_emac_device.dev_addr[1] = 0x60;
-	lpc17xx_emac_device.dev_addr[2] = 0x37;
 	/* set mac address: (only for test) */
-	lpc17xx_emac_device.dev_addr[3] = 0x12;
-	lpc17xx_emac_device.dev_addr[4] = 0x34;
-	lpc17xx_emac_device.dev_addr[5] = 0x56;
+	lpc17xx_emac_device.dev_addr[0] = 0x1E;
+	lpc17xx_emac_device.dev_addr[1] = 0x30;
+	lpc17xx_emac_device.dev_addr[2] = 0x6C;
+	lpc17xx_emac_device.dev_addr[3] = 0xA2;
+	lpc17xx_emac_device.dev_addr[4] = 0x45;
+	lpc17xx_emac_device.dev_addr[5] = 0x5E;
 
 	lpc17xx_emac_device.parent.parent.init		= lpc17xx_emac_init;
 	lpc17xx_emac_device.parent.parent.open		= lpc17xx_emac_open;
@@ -481,7 +455,7 @@ void lpc17xx_emac_hw_init(void)
 	lpc17xx_emac_device.parent.parent.read		= lpc17xx_emac_read;
 	lpc17xx_emac_device.parent.parent.write		= lpc17xx_emac_write;
 	lpc17xx_emac_device.parent.parent.control	= lpc17xx_emac_control;
-	lpc17xx_emac_device.parent.parent.user_data	= RT_NULL;
+	lpc17xx_emac_device.parent.parent.private	= RT_NULL;
 
 	lpc17xx_emac_device.parent.eth_rx			= lpc17xx_emac_rx;
 	lpc17xx_emac_device.parent.eth_tx			= lpc17xx_emac_tx;

@@ -42,11 +42,6 @@ void rt_hw_timer_handler(void)
 	rt_interrupt_leave();
 }
 
-void SysTick_Handler(void)
-{
-    rt_hw_timer_handler();
-}
-
 /**
  * This function will initial LPC17xx board.
  */

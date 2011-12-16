@@ -16,6 +16,6 @@
 
 #include <rtthread.h>
 
-void rt_hw_lcd_init(void);
+void rt_hw_lcd_init();
 
 #endif
