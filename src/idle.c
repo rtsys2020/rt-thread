@@ -1,7 +1,7 @@
 /*
  * File      : idle.c
  * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2006 - 2009, RT-Thread Development Team
+ * COPYRIGHT (C) 2006 - 2011, RT-Thread Development Team
  *
  * The license and distribution terms for this file may be
  * found in the file LICENSE in this distribution or at
@@ -97,7 +97,7 @@ static void rt_thread_idle_entry(void* parameter)
  *
  * @note this function must be invoked when system init.
  */
-void rt_thread_idle_init()
+void rt_thread_idle_init(void)
 {
 	/* init thread */
 	rt_thread_init(&idle,

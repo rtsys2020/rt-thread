@@ -1,7 +1,7 @@
 /*
  * File      : clock.c
  * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2006 - 2009, RT-Thread Development Team
+ * COPYRIGHT (C) 2006 - 2011, RT-Thread Development Team
  *
  * The license and distribution terms for this file may be
  * found in the file LICENSE in this distribution or at
@@ -29,7 +29,7 @@ extern void rt_timer_switch(void);
  * @ingroup SystemInit
  *
  */
-void rt_system_tick_init()
+void rt_system_tick_init(void)
 {
 	rt_tick = 0;
 }
@@ -45,7 +45,7 @@ void rt_system_tick_init()
  *
  * @return current tick
  */
-rt_tick_t rt_tick_get()
+rt_tick_t rt_tick_get(void)
 {
 	/* return the global tick */
 	return rt_tick;
@@ -55,9 +55,9 @@ rt_tick_t rt_tick_get()
  * This function will notify kernel there is one tick passed. Normally,
  * this function is invoked by clock ISR.
  */
-void rt_tick_increase()
+void rt_tick_increase(void)
 {
-	struct rt_thread* thread;
+	struct rt_thread *thread;
 
 	/* increase the global tick */
 	++ rt_tick;
@@ -72,10 +72,10 @@ void rt_tick_increase()
 		thread->remaining_tick = thread->init_tick;
 
 		/* yield */
-	    rt_thread_yield();
+		rt_thread_yield();
 	}
 
-	/* check timer  */
+	/* check timer */
 	rt_timer_check();
 }
 
@@ -89,7 +89,7 @@ void rt_tick_increase()
 rt_tick_t rt_tick_from_millisecond(rt_uint32_t ms)
 {
 	/* return the calculated tick */
-	return (RT_TICK_PER_SECOND * ms+999) / 1000; 
+	return (RT_TICK_PER_SECOND * ms + 999) / 1000;
 }
 
 /*@}*/

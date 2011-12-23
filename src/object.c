@@ -1,7 +1,7 @@
 /*
  * File      : object.c
  * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2006 - 2009, RT-Thread Development Team
+ * COPYRIGHT (C) 2006 - 2011, RT-Thread Development Team
  *
  * The license and distribution terms for this file may be
  * found in the file LICENSE in this distribution or at
@@ -64,11 +64,11 @@ struct rt_object_information rt_object_container[RT_Object_Class_Unknown] =
 };
 
 #ifdef RT_USING_HOOK
-static void (*rt_object_attach_hook)(struct rt_object* object);
-static void (*rt_object_detach_hook)(struct rt_object* object);
-void (*rt_object_trytake_hook)(struct rt_object* object);
-void (*rt_object_take_hook)(struct rt_object* object);
-void (*rt_object_put_hook)(struct rt_object* object);
+static void (*rt_object_attach_hook)(struct rt_object *object);
+static void (*rt_object_detach_hook)(struct rt_object *object);
+void (*rt_object_trytake_hook)(struct rt_object *object);
+void (*rt_object_take_hook)(struct rt_object *object);
+void (*rt_object_put_hook)(struct rt_object *object);
 
 /**
  * @addtogroup Hook
@@ -81,7 +81,7 @@ void (*rt_object_put_hook)(struct rt_object* object);
  *
  * @param hook the hook function
  */
-void rt_object_attach_sethook(void (*hook)(struct rt_object* object))
+void rt_object_attach_sethook(void (*hook)(struct rt_object *object))
 {
 	rt_object_attach_hook = hook;
 }
@@ -92,7 +92,7 @@ void rt_object_attach_sethook(void (*hook)(struct rt_object* object))
  *
  * @param hook the hook function
  */
-void rt_object_detach_sethook(void (*hook)(struct rt_object* object))
+void rt_object_detach_sethook(void (*hook)(struct rt_object *object))
 {
 	rt_object_detach_hook = hook;
 }
@@ -110,7 +110,7 @@ void rt_object_detach_sethook(void (*hook)(struct rt_object* object))
  *
  * @param hook the hook function
  */
-void rt_object_trytake_sethook(void (*hook)(struct rt_object* object))
+void rt_object_trytake_sethook(void (*hook)(struct rt_object *object))
 {
 	rt_object_trytake_hook = hook;
 }
@@ -129,7 +129,7 @@ void rt_object_trytake_sethook(void (*hook)(struct rt_object* object))
  *
  * @param hook the hook function
  */
-void rt_object_take_sethook(void (*hook)(struct rt_object* object))
+void rt_object_take_sethook(void (*hook)(struct rt_object *object))
 {
 	rt_object_take_hook = hook;
 }
@@ -140,7 +140,7 @@ void rt_object_take_sethook(void (*hook)(struct rt_object* object))
  *
  * @param hook the hook function
  */
-void rt_object_put_sethook(void (*hook)(struct rt_object* object))
+void rt_object_put_sethook(void (*hook)(struct rt_object *object))
 {
 	rt_object_put_hook = hook;
 }
@@ -170,10 +170,10 @@ void rt_system_object_init(void)
  * @param type the object type.
  * @param name the object name. In system, the object's name must be unique.
  */
-void rt_object_init(struct rt_object* object, enum rt_object_class_type type, const char* name)
+void rt_object_init(struct rt_object *object, enum rt_object_class_type type, const char *name)
 {
 	register rt_base_t temp;
-	struct rt_object_information* information;
+	struct rt_object_information *information;
 
 	/* get object information */
 	information = &rt_object_container[type];
@@ -242,16 +242,18 @@ void rt_object_detach(rt_object_t object)
  *
  * @return object
  */
-rt_object_t rt_object_allocate(enum rt_object_class_type type, const char* name)
+rt_object_t rt_object_allocate(enum rt_object_class_type type, const char *name)
 {
-	struct rt_object* object;
+	struct rt_object *object;
 	register rt_base_t temp;
-	struct rt_object_information* information;
+	struct rt_object_information *information;
+
+	RT_DEBUG_NOT_IN_INTERRUPT;
 
 	/* get object information */
 	information = &rt_object_container[type];
 
-	object = (struct rt_object*)rt_malloc(information->object_size);
+	object = (struct rt_object *)rt_malloc(information->object_size);
 	if (object == RT_NULL)
 	{
 		/* no memory can be allocated */

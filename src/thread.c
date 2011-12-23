@@ -1,7 +1,7 @@
 /*
  * File      : thread.c
  * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2006 - 2010, RT-Thread Development Team
+ * COPYRIGHT (C) 2006 - 2011, RT-Thread Development Team
  *
  * The license and distribution terms for this file may be
  * found in the file LICENSE in this distribution or at
@@ -29,7 +29,7 @@
 /*#define THREAD_DEBUG */
 
 extern rt_list_t rt_thread_priority_table[RT_THREAD_PRIORITY_MAX];
-extern struct rt_thread* rt_current_thread;
+extern struct rt_thread *rt_current_thread;
 extern rt_uint8_t rt_current_priority;
 
 #ifdef RT_USING_HEAP
@@ -37,18 +37,18 @@ extern rt_list_t rt_thread_defunct;
 #endif
 
 static void rt_thread_exit(void);
-void rt_thread_timeout(void* parameter);
+void rt_thread_timeout(void *parameter);
 
-static rt_err_t _rt_thread_init(struct rt_thread* thread,
-	const char* name,
-	void (*entry)(void* parameter), void* parameter,
-	void* stack_start, rt_uint32_t stack_size,
+static rt_err_t _rt_thread_init(struct rt_thread *thread,
+	const char *name,
+	void (*entry)(void *parameter), void *parameter,
+	void *stack_start, rt_uint32_t stack_size,
 	rt_uint8_t priority, rt_uint32_t tick)
 {
 	/* init thread list */
 	rt_list_init(&(thread->tlist));
 
-	thread->entry = (void*)entry;
+	thread->entry = (void *)entry;
 	thread->parameter = parameter;
 
 	/* stack init */
@@ -57,9 +57,9 @@ static rt_err_t _rt_thread_init(struct rt_thread* thread,
 
 	/* init thread stack */
 	rt_memset(thread->stack_addr, '#', thread->stack_size);
-	thread->sp = (void*)rt_hw_stack_init(thread->entry, thread->parameter,
+	thread->sp = (void *)rt_hw_stack_init(thread->entry, thread->parameter,
 		(void *) ((char *)thread->stack_addr + thread->stack_size - 4),
-		(void*)rt_thread_exit);
+		(void *)rt_thread_exit);
 
 	/* priority init */
 	RT_ASSERT(priority < RT_THREAD_PRIORITY_MAX);
@@ -111,10 +111,10 @@ static rt_err_t _rt_thread_init(struct rt_thread* thread,
  * @return the operation status, RT_EOK on OK, -RT_ERROR on error
  *
  */
-rt_err_t rt_thread_init(struct rt_thread* thread,
-	const char* name,
-	void (*entry)(void* parameter), void* parameter,
-	void* stack_start, rt_uint32_t stack_size,
+rt_err_t rt_thread_init(struct rt_thread *thread,
+	const char *name,
+	void (*entry)(void *parameter), void *parameter,
+	void *stack_start, rt_uint32_t stack_size,
 	rt_uint8_t priority, rt_uint32_t tick)
 {
 	/* thread check */
@@ -145,19 +145,19 @@ rt_err_t rt_thread_init(struct rt_thread* thread,
  * @return the created thread object
  *
  */
-rt_thread_t rt_thread_create (const char* name,
-	void (*entry)(void* parameter), void* parameter,
+rt_thread_t rt_thread_create(const char *name,
+	void (*entry)(void *parameter), void *parameter,
 	rt_uint32_t stack_size,
 	rt_uint8_t priority,
 	rt_uint32_t tick)
 {
-	struct rt_thread* thread;
-	void* stack_start;
+	struct rt_thread *thread;
+	void *stack_start;
 
-	thread = (struct rt_thread*) rt_object_allocate(RT_Object_Class_Thread, name);
+	thread = (struct rt_thread *)rt_object_allocate(RT_Object_Class_Thread, name);
 	if (thread == RT_NULL) return RT_NULL;
 
-	stack_start = (void*)rt_malloc(stack_size);
+	stack_start = (void *)rt_malloc(stack_size);
 	if (stack_start == RT_NULL)
 	{
 		/* allocate stack failure */
@@ -179,7 +179,7 @@ rt_thread_t rt_thread_create (const char* name,
  * @return the self thread object
  *
  */
-rt_thread_t rt_thread_self (void)
+rt_thread_t rt_thread_self(void)
 {
 	return rt_current_thread;
 }
@@ -192,7 +192,7 @@ rt_thread_t rt_thread_self (void)
  * @return the operation status, RT_EOK on OK, -RT_ERROR on error
  *
  */
-rt_err_t rt_thread_startup (rt_thread_t thread)
+rt_err_t rt_thread_startup(rt_thread_t thread)
 {
 	/* thread check */
 	RT_ASSERT(thread != RT_NULL);
@@ -222,9 +222,9 @@ rt_err_t rt_thread_startup (rt_thread_t thread)
 	return RT_EOK;
 }
 
-static void rt_thread_exit()
+static void rt_thread_exit(void)
 {
-	struct rt_thread* thread;
+	struct rt_thread *thread;
     register rt_base_t temp;
 
     /* disable interrupt */
@@ -276,7 +276,7 @@ static void rt_thread_exit()
  * @return the operation status, RT_EOK on OK, -RT_ERROR on error
  *
  */
-rt_err_t rt_thread_detach (rt_thread_t thread)
+rt_err_t rt_thread_detach(rt_thread_t thread)
 {
 	/* thread check */
 	RT_ASSERT(thread != RT_NULL);
@@ -306,7 +306,7 @@ rt_err_t rt_thread_detach (rt_thread_t thread)
  * @return the operation status, RT_EOK on OK, -RT_ERROR on error
  *
  */
-rt_err_t rt_thread_delete (rt_thread_t thread)
+rt_err_t rt_thread_delete(rt_thread_t thread)
 {
 	rt_base_t lock;
 
@@ -343,7 +343,7 @@ rt_err_t rt_thread_delete (rt_thread_t thread)
  * @return RT_EOK
  *
  */
-rt_err_t rt_thread_yield ()
+rt_err_t rt_thread_yield(void)
 {
 	register rt_base_t level;
 	struct rt_thread *thread;
@@ -386,7 +386,7 @@ rt_err_t rt_thread_yield ()
  * @return RT_EOK
  *
  */
-rt_err_t rt_thread_sleep (rt_tick_t tick)
+rt_err_t rt_thread_sleep(rt_tick_t tick)
 {
 	register rt_base_t temp;
 	struct rt_thread *thread;
@@ -441,7 +441,7 @@ rt_err_t rt_thread_delay(rt_tick_t tick)
  *
  * @return RT_EOK
  */
-rt_err_t rt_thread_control (rt_thread_t thread, rt_uint8_t cmd, void* arg)
+rt_err_t rt_thread_control(rt_thread_t thread, rt_uint8_t cmd, void *arg)
 {
 	register rt_base_t temp;
 
@@ -461,7 +461,7 @@ rt_err_t rt_thread_control (rt_thread_t thread, rt_uint8_t cmd, void* arg)
 			rt_schedule_remove_thread(thread);
 
 			/* change thread priority */
-			thread->current_priority = *(rt_uint8_t*) arg;
+			thread->current_priority = *(rt_uint8_t *)arg;
 
 			/* recalculate priority attribute */
 #if RT_THREAD_PRIORITY_MAX > 32
@@ -477,7 +477,7 @@ rt_err_t rt_thread_control (rt_thread_t thread, rt_uint8_t cmd, void* arg)
 		}
 		else
 		{
-			thread->current_priority = *(rt_uint8_t*) arg;
+			thread->current_priority = *(rt_uint8_t *)arg;
 
 			/* recalculate priority attribute */
 #if RT_THREAD_PRIORITY_MAX > 32
@@ -518,7 +518,7 @@ rt_err_t rt_thread_control (rt_thread_t thread, rt_uint8_t cmd, void* arg)
  * @note if suspend self thread, after this function call, the
  * rt_schedule() must be invoked.
  */
-rt_err_t rt_thread_suspend (rt_thread_t thread)
+rt_err_t rt_thread_suspend(rt_thread_t thread)
 {
 	register rt_base_t temp;
 
@@ -558,7 +558,7 @@ rt_err_t rt_thread_suspend (rt_thread_t thread)
  * @return the operation status, RT_EOK on OK, -RT_ERROR on error
  *
  */
-rt_err_t rt_thread_resume (rt_thread_t thread)
+rt_err_t rt_thread_resume(rt_thread_t thread)
 {
 	register rt_base_t temp;
 
@@ -600,16 +600,16 @@ rt_err_t rt_thread_resume (rt_thread_t thread)
 
 /**
  * This function is the timeout function for thread, normally which is invoked
- * when thread is timeout to wait some recourse.
+ * when thread is timeout to wait some resourse.
  *
  * @param parameter the parameter of thread timeout function
  *
  */
-void rt_thread_timeout(void* parameter)
+void rt_thread_timeout(void *parameter)
 {
-	struct rt_thread* thread;
+	struct rt_thread *thread;
 
-	thread = (struct rt_thread*) parameter;
+	thread = (struct rt_thread *)parameter;
 
 	/* thread check */
 	RT_ASSERT(thread != RT_NULL);
@@ -637,11 +637,11 @@ void rt_thread_timeout(void* parameter)
  *
  * @note please don't invoke this function in interrupt status.
  */
-rt_thread_t rt_thread_find(char* name)
+rt_thread_t rt_thread_find(char *name)
 {
 	struct rt_object_information *information;
-	struct rt_object* object;
-	struct rt_list_node* node;
+	struct rt_object *object;
+	struct rt_list_node *node;
 
 	extern struct rt_object_information rt_object_container[];
 

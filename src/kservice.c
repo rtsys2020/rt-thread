@@ -1,7 +1,7 @@
 /*
  * File      : kservice.c
  * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2006 - 2009, RT-Thread Development Team
+ * COPYRIGHT (C) 2006 - 2011, RT-Thread Development Team
  *
  * The license and distribution terms for this file may be
  * found in the file LICENSE in this distribution or at
@@ -75,19 +75,19 @@ void rt_set_errno(rt_err_t error)
  * @return the address of source memory
  *
  */
-void *rt_memset(void * s, int c, rt_ubase_t count)
+void *rt_memset(void *s, int c, rt_ubase_t count)
 {
 #ifdef RT_TINY_SIZE
-	char *xs = (char *) s;
+	char *xs = (char *)s;
 
 	while (count--)
 		*xs++ = c;
 
 	return s;
 #else
-#define LBLOCKSIZE 		(sizeof(rt_int32_t))
-#define UNALIGNED(X)   	((rt_int32_t)X & (LBLOCKSIZE - 1))
-#define TOO_SMALL(LEN) 	((LEN) < LBLOCKSIZE)
+#define LBLOCKSIZE      (sizeof(rt_int32_t))
+#define UNALIGNED(X)    ((rt_int32_t)X & (LBLOCKSIZE - 1))
+#define TOO_SMALL(LEN)  ((LEN) < LBLOCKSIZE)
 
 	int i;
 	char *m = (char *)s;
@@ -95,10 +95,10 @@ void *rt_memset(void * s, int c, rt_ubase_t count)
 	rt_uint32_t *aligned_addr;
 	rt_uint32_t d = c & 0xff;
 
-	if (!TOO_SMALL (count) && !UNALIGNED (s))
+	if (!TOO_SMALL(count) && !UNALIGNED(s))
 	{
 		/* If we get this far, we know that n is large and m is word-aligned. */
-		aligned_addr = (rt_uint32_t*)s;
+		aligned_addr = (rt_uint32_t *)s;
 
 		/* Store D into each char sized location in BUFFER so that
 		 * we can set large blocks quickly.
@@ -130,8 +130,8 @@ void *rt_memset(void * s, int c, rt_ubase_t count)
 			count -= LBLOCKSIZE;
 		}
 
-		/* Pick up the remainder with a bytewise loop.  */
-		m = (char*)aligned_addr;
+		/* Pick up the remainder with a bytewise loop. */
+		m = (char *)aligned_addr;
 	}
 
 	while (count--)
@@ -158,10 +158,10 @@ void *rt_memset(void * s, int c, rt_ubase_t count)
  * @return the address of destination memory
  *
  */
-void *rt_memcpy(void * dst, const void *src, rt_ubase_t count)
+void *rt_memcpy(void *dst, const void *src, rt_ubase_t count)
 {
 #ifdef RT_TINY_SIZE
-	char *tmp = (char *) dst, *s = (char *) src;
+	char *tmp = (char *)dst, *s = (char *)src;
 
 	while (count--)
 		*tmp++ = *s++;
@@ -170,25 +170,25 @@ void *rt_memcpy(void * dst, const void *src, rt_ubase_t count)
 #else
 
 #define UNALIGNED(X, Y) \
-	(((rt_int32_t)X & (sizeof (rt_int32_t) - 1)) | ((rt_int32_t)Y & (sizeof (rt_int32_t) - 1)))
-#define BIGBLOCKSIZE    (sizeof (rt_int32_t) << 2)
-#define LITTLEBLOCKSIZE (sizeof (rt_int32_t))
+	(((rt_int32_t)X & (sizeof(rt_int32_t) - 1)) | ((rt_int32_t)Y & (sizeof(rt_int32_t) - 1)))
+#define BIGBLOCKSIZE    (sizeof(rt_int32_t) << 2)
+#define LITTLEBLOCKSIZE (sizeof(rt_int32_t))
 #define TOO_SMALL(LEN)  ((LEN) < BIGBLOCKSIZE)
 
-	char *dst_ptr = (char*)dst;
-	char *src_ptr = (char*)src;
+	char *dst_ptr = (char *)dst;
+	char *src_ptr = (char *)src;
 	rt_int32_t *aligned_dst;
 	rt_int32_t *aligned_src;
 	int len = count;
 
 	/* If the size is small, or either SRC or DST is unaligned,
-	then punt into the byte copy loop.  This should be rare.  */
-	if (!TOO_SMALL(len) && !UNALIGNED (src_ptr, dst_ptr))
+	then punt into the byte copy loop.  This should be rare. */
+	if (!TOO_SMALL(len) && !UNALIGNED(src_ptr, dst_ptr))
 	{
-		aligned_dst = (rt_int32_t*)dst_ptr;
-		aligned_src = (rt_int32_t*)src_ptr;
+		aligned_dst = (rt_int32_t *)dst_ptr;
+		aligned_src = (rt_int32_t *)src_ptr;
 
-		/* Copy 4X long words at a time if possible.  */
+		/* Copy 4X long words at a time if possible. */
 		while (len >= BIGBLOCKSIZE)
 		{
 			*aligned_dst++ = *aligned_src++;
@@ -198,16 +198,16 @@ void *rt_memcpy(void * dst, const void *src, rt_ubase_t count)
 			len -= BIGBLOCKSIZE;
 		}
 
-		/* Copy one long word at a time if possible.  */
+		/* Copy one long word at a time if possible. */
 		while (len >= LITTLEBLOCKSIZE)
 		{
 			*aligned_dst++ = *aligned_src++;
 			len -= LITTLEBLOCKSIZE;
 		}
 
-		/* Pick up any residual with a byte copier.  */
-		dst_ptr = (char*)aligned_dst;
-		src_ptr = (char*)aligned_src;
+		/* Pick up any residual with a byte copier. */
+		dst_ptr = (char *)aligned_dst;
+		src_ptr = (char *)aligned_src;
 	}
 
 	while (len--)
@@ -232,14 +232,14 @@ void *rt_memcpy(void * dst, const void *src, rt_ubase_t count)
  * @return the address of destination memory
  *
  */
-void* rt_memmove(void *dest, const void *src, rt_ubase_t n)
+void *rt_memmove(void *dest, const void *src, rt_ubase_t n)
 {
-	char *tmp = (char *) dest, *s = (char *) src;
+	char *tmp = (char *)dest, *s = (char *)src;
 
 	if (s < tmp && tmp < s + n)
 	{
-		tmp+=n;
-		s+=n;
+		tmp += n;
+		s += n;
 
 		while (n--)
 			*tmp-- = *s--;
@@ -259,12 +259,12 @@ void* rt_memmove(void *dest, const void *src, rt_ubase_t n)
  * @param ct: Another area of memory
  * @param count: The size of the area.
  */
-rt_int32_t rt_memcmp(const void * cs,const void * ct, rt_ubase_t count)
+rt_int32_t rt_memcmp(const void *cs, const void *ct, rt_ubase_t count)
 {
 	const unsigned char *su1, *su2;
 	int res = 0;
 
-	for( su1 = cs, su2 = ct; 0 < count; ++su1, ++su2, count--)
+	for (su1 = cs, su2 = ct; 0 < count; ++su1, ++su2, count--)
 		if ((res = *su1 - *su2) != 0)
 			break;
 	return res;
@@ -278,20 +278,20 @@ rt_int32_t rt_memcmp(const void * cs,const void * ct, rt_ubase_t count)
  *
  * @return the first occurrence of a s2 in s1, or RT_NULL if no found.
  */
-char * rt_strstr(const char * s1,const char * s2)
+char *rt_strstr(const char *s1, const char *s2)
 {
 	int l1, l2;
 
 	l2 = rt_strlen(s2);
 	if (!l2)
-		return (char *) s1;
+		return (char *)s1;
 	l1 = rt_strlen(s1);
 	while (l1 >= l2)
 	{
-		l1--;
-		if (!rt_memcmp(s1,s2,l2))
-			return (char *) s1;
-		s1++;
+		l1 --;
+		if (!rt_memcmp(s1, s2, l2))
+			return (char *)s1;
+		s1 ++;
 	}
 	return RT_NULL;
 }
@@ -350,7 +350,7 @@ char *rt_strncpy(char *dest, const char *src, rt_ubase_t n)
  *
  * @return the result
  */
-rt_ubase_t rt_strncmp(const char * cs, const char * ct, rt_ubase_t count)
+rt_ubase_t rt_strncmp(const char *cs, const char *ct, rt_ubase_t count)
 {
 	register signed char __res = 0;
 
@@ -358,7 +358,7 @@ rt_ubase_t rt_strncmp(const char * cs, const char * ct, rt_ubase_t count)
 	{
 		if ((__res = *cs - *ct++) != 0 || !*cs++)
 			break;
-		count--;
+		count --;
 	}
 
 	return __res;
@@ -372,7 +372,7 @@ rt_ubase_t rt_strncmp(const char * cs, const char * ct, rt_ubase_t count)
  *
  * @return the result
  */
-rt_ubase_t rt_strcmp (const char *cs, const char *ct)
+rt_ubase_t rt_strcmp(const char *cs, const char *ct)
 {
 	while (*cs && *cs == *ct)
 		cs++, ct++;
@@ -410,7 +410,7 @@ char *rt_strdup(const char *s)
 	rt_size_t len = rt_strlen(s) + 1;
 	char *tmp = (char *)rt_malloc(len);
 
-	if(!tmp) return RT_NULL;
+	if (!tmp) return RT_NULL;
 
 	rt_memcpy(tmp, s, len);
 	return tmp;
@@ -420,7 +420,7 @@ char *rt_strdup(const char *s)
 /**
  * This function will show the version of rt-thread rtos
  */
-void rt_show_version()
+void rt_show_version(void)
 {
 	rt_kprintf("\n \\ | /\n");
 	rt_kprintf("- RT -     Thread Operating System\n");
@@ -458,18 +458,18 @@ rt_inline int skip_atoi(const char **s)
 	return i;
 }
 
-#define ZEROPAD 	(1 << 0)	/* pad with zero */
-#define SIGN 		(1 << 1)	/* unsigned/signed long */
-#define PLUS 		(1 << 2)	/* show plus */
-#define SPACE 		(1 << 3)	/* space if plus */
-#define LEFT 		(1 << 4)	/* left justified */
-#define SPECIAL 	(1 << 5)	/* 0x */
-#define LARGE		(1 << 6)	/* use 'ABCDEF' instead of 'abcdef' */
+#define ZEROPAD     (1 << 0)	/* pad with zero */
+#define SIGN        (1 << 1)	/* unsigned/signed long */
+#define PLUS        (1 << 2)	/* show plus */
+#define SPACE       (1 << 3)	/* space if plus */
+#define LEFT        (1 << 4)	/* left justified */
+#define SPECIAL     (1 << 5)	/* 0x */
+#define LARGE       (1 << 6)	/* use 'ABCDEF' instead of 'abcdef' */
 
 #ifdef RT_PRINTF_PRECISION
-static char *print_number(char * buf, char * end, long num, int base, int s, int precision, int type)
+static char *print_number(char *buf, char *end, long num, int base, int s, int precision, int type)
 #else
-static char *print_number(char * buf, char * end, long num, int base, int s, int type)
+static char *print_number(char *buf, char *end, long num, int base, int s, int type)
 #endif
 {
 	char c, sign;
@@ -528,10 +528,10 @@ static char *print_number(char * buf, char * end, long num, int base, int s, int
 
 	if (!(type&(ZEROPAD | LEFT)))
 	{
-		while(size-->0)
+		while (size-->0)
 		{
 			if (buf <= end) *buf = ' ';
-			++buf;
+			++ buf;
 		}
 	}
 
@@ -540,9 +540,9 @@ static char *print_number(char * buf, char * end, long num, int base, int s, int
 		if (buf <= end)
 		{
 			*buf = sign;
-			--size;
+			-- size;
 		}
-		++buf;
+		++ buf;
 	}
 
 #ifdef RT_PRINTF_SPECIAL
@@ -551,17 +551,17 @@ static char *print_number(char * buf, char * end, long num, int base, int s, int
 		if (base==8)
 		{
 			if (buf <= end) *buf = '0';
-			++buf;
+			++ buf;
 		}
-		else if (base==16)
+		else if (base == 16)
 		{
 			if (buf <= end) *buf = '0';
-			++buf;
+			++ buf;
 			if (buf <= end)
 			{
 				*buf = type & LARGE? 'X' : 'x';
 			}
-			++buf;
+			++ buf;
 		}
 	}
 #endif
@@ -572,7 +572,7 @@ static char *print_number(char * buf, char * end, long num, int base, int s, int
 		while (size-- > 0)
 		{
 			if (buf <= end) *buf = c;
-			++buf;
+			++ buf;
 		}
 	}
 
@@ -580,7 +580,7 @@ static char *print_number(char * buf, char * end, long num, int base, int s, int
 	while (i < precision--)
 	{
 		if (buf <= end) *buf = '0';
-		++buf;
+		++ buf;
 	}
 #endif
 
@@ -588,13 +588,13 @@ static char *print_number(char * buf, char * end, long num, int base, int s, int
 	while (i-- > 0)
 	{
 		if (buf <= end) *buf = tmp[i];
-		++buf;
+		++ buf;
 	}
 
 	while (size-- > 0)
 	{
 		if (buf <= end) *buf = ' ';
-		++buf;
+		++ buf;
 	}
 
 	return buf;
@@ -635,17 +635,17 @@ static rt_int32_t vsnprintf(char *buf, rt_size_t size, const char *fmt, va_list 
 		if (*fmt != '%')
 		{
 			if (str <= end) *str = *fmt;
-			++str;
+			++ str;
 			continue;
 		}
 
 		/* process flags */
 		flags = 0;
 
-		while(1)
+		while (1)
 		{
 			/* skips the first '%' also */
-			++fmt;
+			++ fmt;
 			if (*fmt == '-') flags |= LEFT;
 			else if (*fmt == '+') flags |= PLUS;
 			else if (*fmt == ' ') flags |= SPACE;
@@ -659,7 +659,7 @@ static rt_int32_t vsnprintf(char *buf, rt_size_t size, const char *fmt, va_list 
 		if (isdigit(*fmt)) field_width = skip_atoi(&fmt);
 		else if (*fmt == '*')
 		{
-			++fmt;
+			++ fmt;
 			/* it's the next argument */
 			field_width = va_arg(args, int);
 			if (field_width < 0)
@@ -674,11 +674,11 @@ static rt_int32_t vsnprintf(char *buf, rt_size_t size, const char *fmt, va_list 
 		precision = -1;
 		if (*fmt == '.')
 		{
-			++fmt;
+			++ fmt;
 			if (isdigit(*fmt)) precision = skip_atoi(&fmt);
 			else if (*fmt == '*')
 			{
-				++fmt;
+				++ fmt;
 				/* it's the next argument */
 				precision = va_arg(args, int);
 			}
@@ -694,12 +694,12 @@ static rt_int32_t vsnprintf(char *buf, rt_size_t size, const char *fmt, va_list 
 		   )
 		{
 			qualifier = *fmt;
-			++fmt;
+			++ fmt;
 #ifdef RT_PRINTF_LONGLONG
 			if (qualifier == 'l' && *fmt == 'l')
 			{
 				qualifier = 'L';
-				++fmt;
+				++ fmt;
 			}
 #endif
 		}
@@ -715,20 +715,20 @@ static rt_int32_t vsnprintf(char *buf, rt_size_t size, const char *fmt, va_list 
 				while (--field_width > 0)
 				{
 					if (str <= end) *str = ' ';
-					++str;
+					++ str;
 				}
 			}
 
 			/* get character */
-			c = (rt_uint8_t) va_arg(args, int);
+			c = (rt_uint8_t)va_arg(args, int);
 			if (str <= end) *str = c;
-			++str;
+			++ str;
 
 			/* put width */
 			while (--field_width > 0)
 			{
 				if (str <= end) *str = ' ';
-				++str;
+				++ str;
 			}
 			continue;
 
@@ -746,21 +746,21 @@ static rt_int32_t vsnprintf(char *buf, rt_size_t size, const char *fmt, va_list 
 				while (len < field_width--)
 				{
 					if (str <= end) *str = ' ';
-					++str;
+					++ str;
 				}
 			}
 
 			for (i = 0; i < len; ++i)
 			{
 				if (str <= end) *str = *s;
-				++str;
-				++s;
+				++ str;
+				++ s;
 			}
 
 			while (len < field_width--)
 			{
 				if (str <= end) *str = ' ';
-				++str;
+				++ str;
 			}
 			continue;
 
@@ -772,18 +772,18 @@ static rt_int32_t vsnprintf(char *buf, rt_size_t size, const char *fmt, va_list 
 			}
 #ifdef RT_PRINTF_PRECISION
 			str = print_number(str, end,
-							   (long) va_arg(args, void *),
+							   (long)va_arg(args, void *),
 							   16, field_width, precision, flags);
 #else
 			str = print_number(str, end,
-							   (long) va_arg(args, void *),
+							   (long)va_arg(args, void *),
 							   16, field_width, flags);
 #endif
 			continue;
 
 		case '%':
 			if (str <= end) *str = '%';
-			++str;
+			++ str;
 			continue;
 
 			/* integer number formats - set up the flags and "break" */
@@ -805,16 +805,16 @@ static rt_int32_t vsnprintf(char *buf, rt_size_t size, const char *fmt, va_list 
 
 		default:
 			if (str <= end) *str = '%';
-			++str;
+			++ str;
 
 			if (*fmt)
 			{
 				if (str <= end) *str = *fmt;
-				++str;
+				++ str;
 			}
 			else
 			{
-				--fmt;
+				-- fmt;
 			}
 			continue;
 		}
@@ -827,17 +827,17 @@ static rt_int32_t vsnprintf(char *buf, rt_size_t size, const char *fmt, va_list 
 #endif
 		{
 			num = va_arg(args, rt_uint32_t);
-			if (flags & SIGN) num = (rt_int32_t) num;
+			if (flags & SIGN) num = (rt_int32_t)num;
 		}
 		else if (qualifier == 'h')
 		{
-			num = (rt_uint16_t) va_arg(args, rt_int32_t);
-			if (flags & SIGN) num = (rt_int16_t) num;
+			num = (rt_uint16_t)va_arg(args, rt_int32_t);
+			if (flags & SIGN) num = (rt_int16_t)num;
 		}
 		else
 		{
 			num = va_arg(args, rt_uint32_t);
-			if (flags & SIGN) num = (rt_int32_t) num;
+			if (flags & SIGN) num = (rt_int32_t)num;
 		}
 #ifdef RT_PRINTF_PRECISION
 		str = print_number(str, end, num, base, field_width, precision, flags);
@@ -892,14 +892,14 @@ rt_int32_t rt_vsprintf(char *buf, const char *format, va_list arg_ptr)
  * @param buf the buffer to save formatted string
  * @param format the format
  */
-rt_int32_t rt_sprintf(char *buf ,const char *format,...)
+rt_int32_t rt_sprintf(char *buf, const char *format, ...)
 {
 	rt_int32_t n;
 	va_list arg_ptr;
 
 	va_start(arg_ptr, format);
-	n = rt_vsprintf(buf ,format,arg_ptr);
-	va_end (arg_ptr);
+	n = rt_vsprintf(buf ,format, arg_ptr);
+	va_end(arg_ptr);
 
 	return n;
 }
@@ -914,7 +914,7 @@ rt_int32_t rt_sprintf(char *buf ,const char *format,...)
  *
  * @return the old console device handler
  */
-rt_device_t rt_console_set_device(const char* name)
+rt_device_t rt_console_set_device(const char *name)
 {
 	rt_device_t new, old;
 
@@ -941,18 +941,18 @@ rt_device_t rt_console_set_device(const char* name)
 #endif
 
 #if defined(__GNUC__)
-void rt_hw_console_output(const char* str) __attribute__((weak));
-void rt_hw_console_output(const char* str)
+void rt_hw_console_output(const char *str) __attribute__((weak));
+void rt_hw_console_output(const char *str)
 #elif defined(__CC_ARM)
-__weak void rt_hw_console_output(const char* str)
+__weak void rt_hw_console_output(const char *str)
 #elif defined(__IAR_SYSTEMS_ICC__)
 #if __VER__ > 540
-__weak 
+__weak
 #endif
-void rt_hw_console_output(const char* str)
+void rt_hw_console_output(const char *str)
 #endif
 {
-    /* empty console output */
+	/* empty console output */
 }
 
 /**
@@ -973,7 +973,7 @@ void rt_kprintf(const char *fmt, ...)
 #ifdef RT_USING_DEVICE
 	if (_console_device == RT_NULL)
 	{
-        rt_hw_console_output(rt_log_buf);
+		rt_hw_console_output(rt_log_buf);
 	}
 	else
 	{
@@ -987,9 +987,9 @@ void rt_kprintf(const char *fmt, ...)
 
 #if !defined (RT_USING_NEWLIB) && defined (RT_USING_MINILIBC) && defined (__GNUC__)
 #include <sys/types.h>
-void* memcpy(void *dest, const void *src, size_t n) __attribute__((weak, alias("rt_memcpy")));
-void* memset(void *s, int c, size_t n) __attribute__((weak, alias("rt_memset")));
-void* memmove(void *dest, const void *src, size_t n) __attribute__((weak, alias("rt_memmove")));
+void *memcpy(void *dest, const void *src, size_t n) __attribute__((weak, alias("rt_memcpy")));
+void *memset(void *s, int c, size_t n) __attribute__((weak, alias("rt_memset")));
+void *memmove(void *dest, const void *src, size_t n) __attribute__((weak, alias("rt_memmove")));
 int   memcmp(const void *s1, const void *s2, size_t n) __attribute__((weak, alias("rt_memcmp")));
 
 size_t strlen(const char *s) __attribute__((weak, alias("rt_strlen")));
@@ -1001,7 +1001,7 @@ int strncmp(const char *cs, const char *ct, size_t count) __attribute__((weak, a
 char *strdup(const char *s) __attribute__((weak, alias("rt_strdup")));
 #endif
 
-int sprintf(char * buf,const char * format,...) __attribute__((weak, alias("rt_sprintf")));
+int sprintf(char *buf, const char *format, ...) __attribute__((weak, alias("rt_sprintf")));
 int snprintf(char *buf, rt_size_t size, const char *fmt, ...) __attribute__((weak, alias("rt_snprintf")));
 int vsprintf(char *buf, const char *format, va_list arg_ptr) __attribute__((weak, alias("rt_vsprintf")));
 

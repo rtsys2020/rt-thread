@@ -1,7 +1,7 @@
 /*
  * File      : slab.c
  * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2008 - 2009, RT-Thread Development Team
+ * COPYRIGHT (C) 2008 - 2011, RT-Thread Development Team
  *
  * The license and distribution terms for this file may be
  * found in the file LICENSE in this distribution or at
@@ -150,7 +150,7 @@ void rt_free_sethook(void (*hook)(void *ptr))
  */
 typedef struct slab_chunk
 {
-    struct slab_chunk *c_next;
+	struct slab_chunk *c_next;
 } slab_chunk;
 
 /*
@@ -303,7 +303,7 @@ static void rt_page_free(void *addr, rt_size_t npages)
 /*
  * Initialize the page allocator
  */
-static void rt_page_init(void* addr, rt_size_t npages)
+static void rt_page_init(void *addr, rt_size_t npages)
 {
 	RT_ASSERT(addr != RT_NULL);
 	RT_ASSERT(npages != 0);
@@ -321,7 +321,7 @@ static void rt_page_init(void* addr, rt_size_t npages)
  * @param end_addr the end address of system page
  *
  */
-void rt_system_heap_init(void *begin_addr, void* end_addr)
+void rt_system_heap_init(void *begin_addr, void *end_addr)
 {
 	rt_uint32_t limsize, npages;
 
@@ -329,8 +329,8 @@ void rt_system_heap_init(void *begin_addr, void* end_addr)
 	heap_start	= RT_ALIGN((rt_uint32_t)begin_addr, RT_MM_PAGE_SIZE);
 	heap_end	= RT_ALIGN_DOWN((rt_uint32_t)end_addr, RT_MM_PAGE_SIZE);
 
-	if(heap_start >= heap_end)
-    {
+	if (heap_start >= heap_end)
+	{
 		rt_kprintf("rt_system_heap_init, error begin address 0x%x, and end address 0x%x\n", (rt_uint32_t)begin_addr, (rt_uint32_t)end_addr);
 		return;
 	}
@@ -343,7 +343,7 @@ void rt_system_heap_init(void *begin_addr, void* end_addr)
 #endif
 
 	/* init pages */
-	rt_page_init((void*)heap_start, npages);
+	rt_page_init((void *)heap_start, npages);
 
 	/* calculate zone size */
 	zone_size = ZALLOC_MIN_ZONE_SIZE;
@@ -544,7 +544,7 @@ void *rt_malloc(rt_size_t size)
 		{
 			/* remove zone from free zone list */
 			zone_free = z->z_next;
-			--zone_free_cnt;
+			-- zone_free_cnt;
 		}
 		else
 		{
@@ -642,14 +642,14 @@ void *rt_realloc(void *ptr, rt_size_t size)
 
 		osize = kup->size << RT_MM_PAGE_BITS;
 		if ((nptr = rt_malloc(size)) == RT_NULL) return RT_NULL;
-		rt_memcpy(nptr, ptr, size > osize? osize : size);
+		rt_memcpy(nptr, ptr, size > osize ? osize : size);
 		rt_free(ptr);
 
 		return nptr;
 	}
 	else if (kup->type == PAGE_TYPE_SMALL)
 	{
-		z = (slab_zone*)(((rt_uint32_t)ptr & ~RT_MM_PAGE_MASK) - kup->size * RT_MM_PAGE_SIZE);
+		z = (slab_zone *)(((rt_uint32_t)ptr & ~RT_MM_PAGE_MASK) - kup->size * RT_MM_PAGE_SIZE);
 		RT_ASSERT(z->z_magic == ZALLOC_SLAB_MAGIC);
 
 		zoneindex(&size);
@@ -662,7 +662,7 @@ void *rt_realloc(void *ptr, rt_size_t size)
 		 */
 		if ((nptr = rt_malloc(size)) == RT_NULL) return RT_NULL;
 
-		rt_memcpy(nptr, ptr, size > z->z_chunksize? z->z_chunksize : size);
+		rt_memcpy(nptr, ptr, size > z->z_chunksize ? z->z_chunksize : size);
 		rt_free(ptr);
 
 		return nptr;
@@ -751,7 +751,7 @@ void rt_free(void *ptr)
 	RT_ASSERT(z->z_magic == ZALLOC_SLAB_MAGIC);
 
 	interrupt_level = rt_hw_interrupt_disable();
-	chunk = (slab_chunk*)ptr;
+	chunk = (slab_chunk *)ptr;
 	chunk->c_next = z->z_freechunk;
 	z->z_freechunk = chunk;
 
@@ -771,8 +771,7 @@ void rt_free(void *ptr)
 	 * this code can be called from an IPI callback, do *NOT* try to mess
 	 * with kernel_map here.  Hysteresis will be performed at malloc() time.
 	 */
-	if (z->z_nfree == z->z_nmax &&
-		(z->z_next || zone_array[z->z_zoneindex] != z))
+	if (z->z_nfree == z->z_nmax && (z->z_next || zone_array[z->z_zoneindex] != z))
 	{
 		slab_zone **pz;
 
@@ -781,7 +780,7 @@ void rt_free(void *ptr)
 #endif
 
 		/* remove zone from zone array list */
-		for (pz = &zone_array[z->z_zoneindex]; z != *pz; pz = &(*pz)->z_next) ;
+		for (pz = &zone_array[z->z_zoneindex]; z != *pz; pz = &(*pz)->z_next);
 		*pz = z->z_next;
 
 		/* reset zone */
@@ -791,7 +790,7 @@ void rt_free(void *ptr)
 		z->z_next = zone_free;
 		zone_free = z;
 
-		++zone_free_cnt;
+		++ zone_free_cnt;
 
 		/* release zone to page allocator */
 		if (zone_free_cnt > ZONE_RELEASE_THRESH)
@@ -800,7 +799,7 @@ void rt_free(void *ptr)
 
 			z = zone_free;
 			zone_free = z->z_next;
-			--zone_free_cnt;
+			-- zone_free_cnt;
 
 			/* set message usage */
 			for (i = 0, kup = btokup(z); i < zone_page_cnt; i ++)

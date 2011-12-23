@@ -1,17 +1,18 @@
 /*
  * File      : rtdef.h
  * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2006, RT-Thread Development Team
+ * COPYRIGHT (C) 2006 - 2011, RT-Thread Development Team
  *
  * The license and distribution terms for this file may be
  * found in the file LICENSE in this distribution or at
- * http://openlab.rt-thread.com/license/LICENSE.
+ * http://www.rt-thread.org/license/LICENSE
  *
  * Change Logs:
  * Date           Author       Notes
  * 2007-01-10     Bernard      the first version
  * 2008-07-12	  Bernard	   remove all type of rt_int8, rt_uint32 etc
  */
+ 
 #ifndef __RT_DEF_H__
 #define __RT_DEF_H__
 
