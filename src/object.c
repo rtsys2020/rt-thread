@@ -248,8 +248,6 @@ rt_object_t rt_object_allocate(enum rt_object_class_type type, const char *name)
 	register rt_base_t temp;
 	struct rt_object_information *information;
 
-	RT_DEBUG_NOT_IN_INTERRUPT;
-
 	/* get object information */
 	information = &rt_object_container[type];
 
