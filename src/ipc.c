@@ -1276,6 +1276,11 @@ rt_err_t rt_mb_send_wait(rt_mailbox_t mb, rt_uint32_t value, rt_int32_t timeout)
 	/* parameter check */
 	RT_ASSERT(mb != RT_NULL);
 
+	/* initialize delta tick */
+	tick_delta = 0;
+	/* get current thread */
+	thread = rt_thread_self();
+
 #ifdef RT_USING_HOOK
 	if (rt_object_put_hook != RT_NULL)
 		rt_object_put_hook(&(mb->parent.parent));
@@ -1283,9 +1288,6 @@ rt_err_t rt_mb_send_wait(rt_mailbox_t mb, rt_uint32_t value, rt_int32_t timeout)
 
 	/* disable interrupt */
 	temp = rt_hw_interrupt_disable();
-
-	/* get current thread */
-	thread = rt_thread_self();
 
 	/* mailbox is full */
 	while (mb->entry == mb->size)
@@ -1406,6 +1408,9 @@ rt_err_t rt_mb_recv(rt_mailbox_t mb, rt_uint32_t *value, rt_int32_t timeout)
 
 	/* initialize delta tick */
 	tick_delta = 0;
+	/* get current thread */
+	thread = rt_thread_self();
+
 #ifdef RT_USING_HOOK
 	if (rt_object_trytake_hook != RT_NULL)
 		rt_object_trytake_hook(&(mb->parent.parent));
@@ -1413,9 +1418,6 @@ rt_err_t rt_mb_recv(rt_mailbox_t mb, rt_uint32_t *value, rt_int32_t timeout)
 
 	/* disable interrupt */
 	temp = rt_hw_interrupt_disable();
-
-	/* get current thread */
-	thread = rt_thread_self();
 
 	/* mailbox is empty */
 	while (mb->entry == 0)
@@ -1690,7 +1692,7 @@ rt_err_t rt_mq_delete(rt_mq_t mq)
 	/* resume all suspended thread */
 	rt_ipc_list_resume_all(&(mq->parent.suspend_thread));
 
-	/* free mailbox pool */
+	/* free message queue pool */
 	rt_free(mq->msg_pool);
 
 	/* delete message queue object */
@@ -1883,14 +1885,14 @@ rt_err_t rt_mq_recv(rt_mq_t mq, void *buffer, rt_size_t size, rt_int32_t timeout
 	struct rt_mq_message *msg;
 	rt_uint32_t tick_delta;
 
+	/* initialize delta tick */
+	tick_delta = 0;
+	/* get current thread */
+	thread = rt_thread_self();
 #ifdef RT_USING_HOOK
 	if (rt_object_trytake_hook != RT_NULL)
 		rt_object_trytake_hook(&(mq->parent.parent));
 #endif
-
-	tick_delta = 0;
-	/* get current thread */
-	thread = rt_thread_self();
 
 	/* disable interrupt */
 	temp = rt_hw_interrupt_disable();
