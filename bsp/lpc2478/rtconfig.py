@@ -21,9 +21,9 @@ CPU='lpc24xx'
 TextBase='0x30000000'
 
 #PLATFORM = 'gcc'
-#EXEC_PATH = 'd:/SourceryGCC/bin'
+#EXEC_PATH = 'C:/Program Files/CodeSourcery/Sourcery G++ Lite/bin'
 PLATFORM = 'armcc'
-EXEC_PATH = 'd:/Keil'
+EXEC_PATH = 'C:/Keil'
 BUILD = 'debug'
 
 if PLATFORM == 'gcc':
@@ -38,10 +38,10 @@ if PLATFORM == 'gcc':
     OBJDUMP = PREFIX + 'objdump'
     OBJCPY = PREFIX + 'objcopy'
 
-    DEVICE = ' -mcpu=arm920t'
+    DEVICE = ' -mcpu=arm7tdmi-s'
     CFLAGS = DEVICE + ' -DRT_USING_MINILIBC'
     AFLAGS = ' -c' + DEVICE + ' -x assembler-with-cpp'
-    LFLAGS = DEVICE + ' -Wl,--gc-sections,-Map=main.elf.map,-cref,-u,Reset_Handler -T mini2440_rom.ld'
+    LFLAGS = DEVICE + ' -Wl,--gc-sections,-Map=rtthread-lpc2478.map,-cref,-u,Reset_Handler -T lpc2478_rom.lds'
 
     CPATH = ''
     LPATH = ''
@@ -66,7 +66,7 @@ elif PLATFORM == 'armcc':
     DEVICE = ' --device DARMP'
     CFLAGS = DEVICE + ' --apcs=interwork'
     AFLAGS = DEVICE
-    LFLAGS = DEVICE + ' --info sizes --info totals --info unused --info veneers --list rtt-lpc2478.map --strict --scatter ".\objs\lpc2478.sct"t'
+    LFLAGS = DEVICE + ' --info sizes --info totals --info unused --info veneers --list rtt-lpc2478.map --strict --scatter lpc2478_rom.sct'
 
     CFLAGS += ' -I"' + EXEC_PATH + '/ARM/RV31/INC"'
     CFLAGS += ' -I"' + EXEC_PATH + '/ARM/INC/Philips"'
