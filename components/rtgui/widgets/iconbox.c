@@ -19,7 +19,7 @@ static void _rtgui_iconbox_constructor(rtgui_iconbox_t *iconbox)
 {
 	/* init widget and set event handler */
 	RTGUI_WIDGET(iconbox)->flag |= RTGUI_WIDGET_FLAG_TRANSPARENT;
-	rtgui_object_set_event_handler(RTGUI_OBJECT(iconbox), rtgui_iconbox_event_handler);
+	rtgui_widget_set_event_handler(RTGUI_WIDGET(iconbox), rtgui_iconbox_event_handler);
 
 	/* set proper of control */
 	iconbox->image = RT_NULL;
@@ -46,19 +46,15 @@ DEFINE_CLASS_TYPE(iconbox, "iconbox",
 	_rtgui_iconbox_destructor,
 	sizeof(struct rtgui_iconbox));
 
-rt_bool_t rtgui_iconbox_event_handler(struct rtgui_object* object, struct rtgui_event* event)
+rt_bool_t rtgui_iconbox_event_handler(struct rtgui_widget* widget, struct rtgui_event* event)
 {
-	struct rtgui_iconbox* iconbox;
-	RTGUI_WIDGET_EVENT_HANDLER_PREPARE
-
-	iconbox = RTGUI_ICONBOX(object);
+	struct rtgui_iconbox* iconbox = (struct rtgui_iconbox*)widget;
 
 	switch (event->type)
 	{
 	case RTGUI_EVENT_PAINT:
 #ifndef RTGUI_USING_SMALL_SIZE
-		if (widget->on_draw != RT_NULL)
-			widget->on_draw(RTGUI_OBJECT(widget), event);
+		if (widget->on_draw != RT_NULL) widget->on_draw(widget, event);
 		else
 #endif
 		{

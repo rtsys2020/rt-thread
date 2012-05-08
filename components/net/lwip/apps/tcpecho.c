@@ -19,15 +19,15 @@ void tcpecho_entry(void *parameter)
 	while(1)
 	{
 		/* Grab new connection. */
-		err = netconn_accept(conn, &newconn);
+		newconn = netconn_accept(conn);
 		/* Process the new connection. */
-		if(err == ERR_OK)
+		if(newconn != NULL)
 		{
 			struct netbuf *buf;
 			void *data;
 			u16_t len;
 
-			while(netconn_recv(newconn, &buf) == ERR_OK)
+			while((buf = netconn_recv(newconn)) != NULL)
 			{
 				do
 				{

@@ -1878,9 +1878,6 @@
       <name>$PROJ_DIR$\..\..\components\net\lwip\src\netif\ppp\chpms.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\components\net\lwip\src\core\def.c</name>
-    </file>
-    <file>
       <name>$PROJ_DIR$\..\..\components\net\lwip\src\core\dhcp.c</name>
     </file>
     <file>
@@ -1927,6 +1924,9 @@
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\components\net\lwip\src\netif\ppp\lcp.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\components\net\lwip\src\netif\loopif.c</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\components\net\lwip\src\netif\ppp\magic.c</name>
@@ -1995,6 +1995,9 @@
       <name>$PROJ_DIR$\..\..\components\net\lwip\src\arch\sys_arch.c</name>
     </file>
     <file>
+      <name>$PROJ_DIR$\..\..\components\net\lwip\src\arch\sys_arch_init.c</name>
+    </file>
+    <file>
       <name>$PROJ_DIR$\..\..\components\net\lwip\src\core\tcp.c</name>
     </file>
     <file>
@@ -2005,9 +2008,6 @@
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\components\net\lwip\src\api\tcpip.c</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\..\components\net\lwip\src\core\timers.c</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\components\net\lwip\src\core\udp.c</name>

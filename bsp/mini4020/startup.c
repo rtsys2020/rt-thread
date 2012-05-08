@@ -4,9 +4,7 @@
 #include <sep4020.h>
 #include <board.h>
 #include <serial.h>
-#ifdef RT_USING_FINSH
 #include <finsh.h>
-#endif
 
 #ifdef RT_USING_LWIP
 #include <lwip/sys.h>
@@ -15,10 +13,9 @@
 
 #define SDRAM_BASE	0x30000000
 
+
 #ifdef __CC_ARM
 extern int Image$$RW_RAM1$$ZI$$Limit;
-#elif (defined (__GNUC__))
-	extern unsigned char __bss_end;
 #endif
 
 extern void rt_application_init(void);

@@ -57,7 +57,7 @@ struct rtgui_button
 	rtgui_image_t *pressed_image, *unpressed_image;
 
 	/* click button event handler */
-	rtgui_onbutton_func_t on_button;
+	void (*on_button)(struct rtgui_widget* widget, rtgui_event_t *event);
 };
 typedef struct rtgui_button rtgui_button_t;
 
@@ -70,7 +70,7 @@ void rtgui_button_set_unpressed_image(rtgui_button_t* btn, rtgui_image_t* image)
 
 void rtgui_button_set_onbutton(rtgui_button_t* btn, rtgui_onbutton_func_t func);
 
-rt_bool_t rtgui_button_event_handler(struct rtgui_object* object, struct rtgui_event* event);
+rt_bool_t rtgui_button_event_handler(struct rtgui_widget* widget, struct rtgui_event* event);
 
 /** @} */
 

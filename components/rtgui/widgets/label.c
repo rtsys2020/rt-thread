@@ -19,7 +19,7 @@
 static void _rtgui_label_constructor(rtgui_label_t *label)
 {
 	/* init widget and set event handler */
-	rtgui_object_set_event_handler(RTGUI_OBJECT(label), rtgui_label_event_handler);
+	rtgui_widget_set_event_handler(RTGUI_WIDGET(label), rtgui_label_event_handler);
 
 	/* set field */
 	label->text = RT_NULL;
@@ -38,12 +38,13 @@ DEFINE_CLASS_TYPE(label, "label",
 	_rtgui_label_destructor,
 	sizeof(struct rtgui_label));
 
-rt_bool_t rtgui_label_event_handler(struct rtgui_object *object, struct rtgui_event* event)
+rt_bool_t rtgui_label_event_handler(struct rtgui_widget* widget, struct rtgui_event* event)
 {
-	struct rtgui_label *label;
-	RTGUI_WIDGET_EVENT_HANDLER_PREPARE
+	struct rtgui_label* label;
 
-	label = RTGUI_LABEL(object);
+	RT_ASSERT(widget != RT_NULL);
+
+	label = (struct rtgui_label*) widget;
 	switch (event->type)
 	{
 	case RTGUI_EVENT_PAINT:

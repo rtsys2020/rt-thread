@@ -13,7 +13,7 @@ static void _rtgui_radiobox_constructor(rtgui_radiobox_t *radiobox)
 	RTGUI_WIDGET(radiobox)->flag |= RTGUI_WIDGET_FLAG_FOCUSABLE;
 	RTGUI_WIDGET_TEXTALIGN(RTGUI_WIDGET(radiobox)) = RTGUI_ALIGN_LEFT | RTGUI_ALIGN_CENTER_VERTICAL;
 	rtgui_widget_set_rect(RTGUI_WIDGET(radiobox), &rect);
-	rtgui_object_set_event_handler(RTGUI_OBJECT(radiobox), rtgui_radiobox_event_handler);
+	rtgui_widget_set_event_handler(RTGUI_WIDGET(radiobox), rtgui_radiobox_event_handler);
 
 	/* set proper of control */
 	radiobox->items = RT_NULL;
@@ -76,18 +76,15 @@ static void rtgui_radiobox_onmouse(struct rtgui_radiobox* radiobox, struct rtgui
 	}
 }
 
-rt_bool_t rtgui_radiobox_event_handler(struct rtgui_object* object, struct rtgui_event* event)
+rt_bool_t rtgui_radiobox_event_handler(struct rtgui_widget* widget, struct rtgui_event* event)
 {
-	struct rtgui_radiobox* radiobox;
-	RTGUI_WIDGET_EVENT_HANDLER_PREPARE
+	struct rtgui_radiobox* radiobox = (struct rtgui_radiobox*)widget;
 
-	radiobox = RTGUI_RADIOBOX(object);
 	switch (event->type)
 	{
 	case RTGUI_EVENT_PAINT:
 #ifndef RTGUI_USING_SMALL_SIZE
-		if (widget->on_draw != RT_NULL)
-			widget->on_draw(RTGUI_OBJECT(widget), event);
+		if (widget->on_draw != RT_NULL) widget->on_draw(widget, event);
 		else
 #endif
 		{
@@ -100,8 +97,7 @@ rt_bool_t rtgui_radiobox_event_handler(struct rtgui_object* object, struct rtgui
 		if (RTGUI_WIDGET_IS_HIDE(RTGUI_WIDGET(radiobox))) return RT_FALSE;
 
 #ifndef RTGUI_USING_SMALL_SIZE
-		if (widget->on_key != RT_NULL)
-			widget->on_key(RTGUI_OBJECT(widget), event);
+		if (widget->on_key != RT_NULL) widget->on_key(widget, event);
 		else
 #endif
 		{
@@ -142,8 +138,7 @@ rt_bool_t rtgui_radiobox_event_handler(struct rtgui_object* object, struct rtgui
 
 	case RTGUI_EVENT_MOUSE_BUTTON:
 #ifndef RTGUI_USING_SMALL_SIZE
-		if (widget->on_mouseclick != RT_NULL)
-			widget->on_mouseclick(RTGUI_OBJECT(widget), event);
+		if (widget->on_mouseclick != RT_NULL) widget->on_mouseclick(widget, event);
 		else
 #endif
 		{

@@ -57,7 +57,9 @@
 #include "randm.h"
 #include "magic.h"
 
-
+/***********************************/
+/*** PUBLIC FUNCTION DEFINITIONS ***/
+/***********************************/
 /*
  * magicInit - Initialize the magic number generator.
  *

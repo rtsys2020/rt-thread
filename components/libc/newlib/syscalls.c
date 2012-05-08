@@ -377,6 +377,4 @@ _exit (int status)
 {
 	rt_kprintf("thread:%s exit with %d\n", rt_thread_self()->name, status);
     RT_ASSERT(0);
-
-    while (1);
 }

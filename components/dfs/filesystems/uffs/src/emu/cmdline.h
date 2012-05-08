@@ -45,38 +45,19 @@
 #define FALSE 0
 #endif
 
-#define CLI_INVALID_ARG			-100
+typedef BOOL command_t(const char *tail);
 
-typedef int command_t(int argc, char *argv[]);
-
-struct cli_command {
+struct cli_commandset {
     command_t *handler;
     const char *cmd;
     const char *args;
     const char *descr;
 };
 
-struct cli_commandset {
-	const struct cli_command *cmds;
-	struct cli_commandset *next;
-};
-
-void cli_add_commandset(struct cli_commandset *set);
-int cli_interpret(const char *line);
-int cli_env_get(char env);
-int cli_env_set(char env, int val);
-void cli_main_entry();
-
-#define u_assert(x) \
-	((x) ? TRUE : \
-			(uffs_PerrorRaw(UFFS_MSG_NORMAL, \
-				"Assert failed at %s:%s:%d: '%s' is not true.\n", \
-				__FILE__, __FUNCTION__, __LINE__, #x), FALSE))
-
-
-#define CHK_ARGC(min, max) \
-	if (argc < min || (max > 0 && argc > max)) \
-		return CLI_INVALID_ARG
+const char * cli_getparam(const char *tail, const char **next);
+void cli_add_commandset(struct cli_commandset *cmds);
+void cliInterpret(const char *line);
+void cliMain(void);
 
 #endif
 

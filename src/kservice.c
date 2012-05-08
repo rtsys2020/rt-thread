@@ -1,7 +1,7 @@
 /*
  * File      : kservice.c
  * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2006 - 2012, RT-Thread Development Team
+ * COPYRIGHT (C) 2006 - 2011, RT-Thread Development Team
  *
  * The license and distribution terms for this file may be
  * found in the file LICENSE in this distribution or at
@@ -20,13 +20,9 @@
 #include <rtthread.h>
 #include <rthw.h>
 
-/* use precision */
-#define RT_PRINTF_PRECISION
-
 /**
  * @addtogroup KernelService
  */
-
 /*@{*/
 
 /* global errno in RT-Thread */
@@ -52,8 +48,7 @@ rt_err_t rt_get_errno(void)
 	}
 
 	tid = rt_thread_self();
-	if (tid == RT_NULL)
-		return _errno;
+	if (tid == RT_NULL) return _errno;
 
 	return tid->error;
 }
@@ -71,17 +66,11 @@ void rt_set_errno(rt_err_t error)
 	{
 		/* it's in interrupt context */
 		_errno = error;
-
 		return;
 	}
 
 	tid = rt_thread_self();
-	if (tid == RT_NULL)
-	{
-		_errno = error;
-		
-		return;
-	}
+	if (tid == RT_NULL) { _errno = error; return; }
 
 	tid->error = error;
 }
@@ -95,12 +84,10 @@ int *_rt_errno(void)
 {
 	rt_thread_t tid;
 	
-	if (rt_interrupt_get_nest() != 0)
-		return (int *)&_errno;
+	if (rt_interrupt_get_nest() != 0) return (int *)&_errno;
 
 	tid = rt_thread_self();
-	if (tid != RT_NULL)
-		return (int *)&(tid->error);
+	if (tid != RT_NULL) return (int *)&(tid->error);
 
 	return (int *)&_errno;
 }
@@ -113,6 +100,7 @@ int *_rt_errno(void)
  * @param count the copied length
  *
  * @return the address of source memory
+ *
  */
 void *rt_memset(void *s, int c, rt_ubase_t count)
 {
@@ -160,7 +148,7 @@ void *rt_memset(void *s, int c, rt_ubase_t count)
 			*aligned_addr++ = buffer;
 			*aligned_addr++ = buffer;
 			*aligned_addr++ = buffer;
-			count -= 4 * LBLOCKSIZE;
+			count -= 4*LBLOCKSIZE;
 		}
 
 		while (count >= LBLOCKSIZE)
@@ -195,6 +183,7 @@ void *rt_memset(void *s, int c, rt_ubase_t count)
  * @param count the copied length
  *
  * @return the address of destination memory
+ *
  */
 void *rt_memcpy(void *dst, const void *src, rt_ubase_t count)
 {
@@ -268,6 +257,7 @@ void *rt_memcpy(void *dst, const void *src, rt_ubase_t count)
  * @param n the copied length
  *
  * @return the address of destination memory
+ *
  */
 void *rt_memmove(void *dest, const void *src, rt_ubase_t n)
 {
@@ -307,7 +297,6 @@ rt_int32_t rt_memcmp(const void *cs, const void *ct, rt_ubase_t count)
 	for (su1 = cs, su2 = ct; 0 < count; ++su1, ++su2, count--)
 		if ((res = *su1 - *su2) != 0)
 			break;
-
 	return res;
 }
 
@@ -334,7 +323,6 @@ char *rt_strstr(const char *s1, const char *s2)
 			return (char *)s1;
 		s1 ++;
 	}
-
 	return RT_NULL;
 }
 
@@ -391,7 +379,6 @@ char *rt_strncpy(char *dst, const char *src, rt_ubase_t n)
 			}
 		} while (--n != 0);
 	}
-
 	return (dst);
 }
 
@@ -430,7 +417,6 @@ rt_ubase_t rt_strcmp(const char *cs, const char *ct)
 {
 	while (*cs && *cs == *ct)
 		cs++, ct++;
-
 	return (*cs - *ct);
 }
 
@@ -465,11 +451,9 @@ char *rt_strdup(const char *s)
 	rt_size_t len = rt_strlen(s) + 1;
 	char *tmp = (char *)rt_malloc(len);
 
-	if (!tmp)
-		return RT_NULL;
+	if (!tmp) return RT_NULL;
 
 	rt_memcpy(tmp, s, len);
-
 	return tmp;
 }
 #endif
@@ -482,7 +466,7 @@ void rt_show_version(void)
 	rt_kprintf("\n \\ | /\n");
 	rt_kprintf("- RT -     Thread Operating System\n");
 	rt_kprintf(" / | \\     %d.%d.%d build %s\n", RT_VERSION, RT_SUBVERSION, RT_REVISION, __DATE__);
-	rt_kprintf(" 2006 - 2012 Copyright by rt-thread team\n");
+	rt_kprintf(" 2006 - 2011 Copyright by rt-thread team\n");
 }
 
 /* private function */
@@ -510,8 +494,7 @@ rt_inline rt_int32_t divide(rt_int32_t *n, rt_int32_t base)
 rt_inline int skip_atoi(const char **s)
 {
 	register int i=0;
-	while (isdigit(**s))
-		i = i * 10 + *((*s)++) - '0';
+	while (isdigit(**s)) i = i*10 + *((*s)++) - '0';
 
 	return i;
 }
@@ -545,8 +528,7 @@ static char *print_number(char *buf, char *end, long num, int base, int s, int t
 	size = s;
 
 	digits = (type & LARGE) ? large_digits : small_digits;
-	if (type & LEFT)
-		type &= ~ZEROPAD;
+	if (type & LEFT) type &= ~ZEROPAD;
 
 	c = (type & ZEROPAD) ? '0' : ' ';
 
@@ -572,17 +554,14 @@ static char *print_number(char *buf, char *end, long num, int base, int s, int t
 #endif
 
 	i = 0;
-	if (num == 0)
-		tmp[i++]='0';
+	if (num == 0) tmp[i++]='0';
 	else
 	{
-		while (num != 0)
-			tmp[i++] = digits[divide(&num, base)];
+		while (num != 0) tmp[i++] = digits[divide(&num, base)];
 	}
 
 #ifdef RT_PRINTF_PRECISION
-	if (i > precision)
-		precision = i;
+	if (i > precision) precision = i;
 	size -= precision;
 #else
 	size -= i;
@@ -592,8 +571,7 @@ static char *print_number(char *buf, char *end, long num, int base, int s, int t
 	{
 		while (size-->0)
 		{
-			if (buf <= end)
-				*buf = ' ';
+			if (buf <= end) *buf = ' ';
 			++ buf;
 		}
 	}
@@ -613,14 +591,12 @@ static char *print_number(char *buf, char *end, long num, int base, int s, int t
 	{
 		if (base==8)
 		{
-			if (buf <= end)
-				*buf = '0';
+			if (buf <= end) *buf = '0';
 			++ buf;
 		}
 		else if (base == 16)
 		{
-			if (buf <= end)
-				*buf = '0';
+			if (buf <= end) *buf = '0';
 			++ buf;
 			if (buf <= end)
 			{
@@ -636,8 +612,7 @@ static char *print_number(char *buf, char *end, long num, int base, int s, int t
 	{
 		while (size-- > 0)
 		{
-			if (buf <= end)
-				*buf = c;
+			if (buf <= end) *buf = c;
 			++ buf;
 		}
 	}
@@ -645,8 +620,7 @@ static char *print_number(char *buf, char *end, long num, int base, int s, int t
 #ifdef RT_PRINTF_PRECISION
 	while (i < precision--)
 	{
-		if (buf <= end)
-			*buf = '0';
+		if (buf <= end) *buf = '0';
 		++ buf;
 	}
 #endif
@@ -654,15 +628,13 @@ static char *print_number(char *buf, char *end, long num, int base, int s, int t
 	/* put number in the temporary buffer */
 	while (i-- > 0)
 	{
-		if (buf <= end)
-			*buf = tmp[i];
+		if (buf <= end) *buf = tmp[i];
 		++ buf;
 	}
 
 	while (size-- > 0)
 	{
-		if (buf <= end)
-			*buf = ' ';
+		if (buf <= end) *buf = ' ';
 		++ buf;
 	}
 
@@ -683,7 +655,7 @@ static rt_int32_t vsnprintf(char *buf, rt_size_t size, const char *fmt, va_list 
 	rt_uint8_t base;			/* the base of number */
 	rt_uint8_t flags;			/* flags to print number */
 	rt_uint8_t qualifier;		/* 'h', 'l', or 'L' for integer fields */
-	rt_int32_t field_width;		/* width of output field */
+	rt_int32_t field_width;	/* width of output field */
 
 #ifdef RT_PRINTF_PRECISION
 	int precision;		/* min. # of digits for integers and max for a string */
@@ -703,8 +675,7 @@ static rt_int32_t vsnprintf(char *buf, rt_size_t size, const char *fmt, va_list 
 	{
 		if (*fmt != '%')
 		{
-			if (str <= end)
-				*str = *fmt;
+			if (str <= end) *str = *fmt;
 			++ str;
 			continue;
 		}
@@ -757,11 +728,11 @@ static rt_int32_t vsnprintf(char *buf, rt_size_t size, const char *fmt, va_list 
 #endif
 		/* get the conversion qualifier */
 		qualifier = 0;
+		if (*fmt == 'h' || *fmt == 'l'
 #ifdef RT_PRINTF_LONGLONG
-		if (*fmt == 'h' || *fmt == 'l' || *fmt == 'L')
-#else
-		if (*fmt == 'h' || *fmt == 'l')
+				|| *fmt == 'L'
 #endif
+		   )
 		{
 			qualifier = *fmt;
 			++ fmt;
@@ -922,7 +893,7 @@ static rt_int32_t vsnprintf(char *buf, rt_size_t size, const char *fmt, va_list 
 	/* the trailing null byte doesn't count towards the total
 	* ++str;
 	*/
-	return str - buf;
+	return str-buf;
 }
 
 /**
@@ -1044,6 +1015,7 @@ void rt_hw_console_output(const char *str)
  */
 void rt_kprintf(const char *fmt, ...)
 {
+
 	va_list args;
 	rt_size_t length;
 	static char rt_log_buf[RT_CONSOLEBUF_SIZE];
@@ -1119,9 +1091,9 @@ void* rt_malloc_align(rt_size_t size, rt_size_t align)
  *
  * @param ptr the memory block pointer
  */
-void rt_free_align(void *ptr)
+void rt_free_align(void* ptr)
 {
-	void *real_ptr;
+	void* real_ptr;
 
 	real_ptr = (void*)*(rt_uint32_t*)((rt_uint32_t)ptr - sizeof(void*));
 	rt_free(real_ptr);

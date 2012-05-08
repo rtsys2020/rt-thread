@@ -1,7 +1,7 @@
 /*
  * File      : rtm.c
  * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2006 - 2012, RT-Thread Development Team
+ * COPYRIGHT (C) 2006 - 2010, RT-Thread Development Team
  *
  * The license and distribution terms for this file may be
  * found in the file LICENSE in this distribution or at
@@ -108,16 +108,6 @@ RTM_EXPORT(rt_mq_send);
 RTM_EXPORT(rt_mq_urgent);
 RTM_EXPORT(rt_mq_recv);  
 RTM_EXPORT(rt_mq_control);  
-#endif
-
-#ifdef RT_USING_MEMHEAP
-/*
- * memory heap interface symbol
- */
-RTM_EXPORT(rt_memheap_init);
-RTM_EXPORT(rt_memheap_detach);
-RTM_EXPORT(rt_memheap_alloc);
-RTM_EXPORT(rt_memheap_free);
 #endif
 
 #ifdef RT_USING_MEMPOOL

@@ -19,10 +19,8 @@ struct rtgui_image_hdcmm stop_image = RTGUI_IMAGE_HDC_DEF(2, 0x1c, 0x16, stop_hd
 /*
  * view的事件处理函数
  */
-rt_bool_t dc_event_handler(struct rtgui_object* object, rtgui_event_t *event)
+rt_bool_t dc_event_handler(rtgui_widget_t* widget, rtgui_event_t *event)
 {
-	struct rtgui_widget *widget = RTGUI_WIDGET(object);
-
 	/* 仅对PAINT事件进行处理 */
 	if (event->type == RTGUI_EVENT_PAINT)
 	{
@@ -35,7 +33,7 @@ rt_bool_t dc_event_handler(struct rtgui_object* object, rtgui_event_t *event)
 		 * 因为用的是demo view，上面本身有一部分控件，所以在绘图时先要让demo view
 		 * 先绘图
 		 */
-		rtgui_container_event_handler(RTGUI_OBJECT(widget), event);
+		rtgui_view_event_handler(widget, event);
 
 		/************************************************************************/
 		/* 下面的是DC的操作                                                     */
@@ -48,7 +46,7 @@ rt_bool_t dc_event_handler(struct rtgui_object* object, rtgui_event_t *event)
 			return RT_FALSE;
 
 		/* 获得demo view允许绘图的区域 */
-		demo_view_get_logic_rect(RTGUI_CONTAINER(widget), &rect);
+		demo_view_get_logic_rect(RTGUI_VIEW(widget), &rect);
 
 		RTGUI_DC_TEXTALIGN(dc) = RTGUI_ALIGN_BOTTOM | RTGUI_ALIGN_CENTER_HORIZONTAL;
 		/* 显示GUI的版本信息 */
@@ -172,21 +170,21 @@ rt_bool_t dc_event_handler(struct rtgui_object* object, rtgui_event_t *event)
 	else
 	{
 		/* 其他事件，调用默认的事件处理函数 */
-		return rtgui_container_event_handler(object, event);
+		return rtgui_view_event_handler(widget, event);
 	}
 
 	return RT_FALSE;
 }
 
 /* 创建用于DC操作演示用的视图 */
-rtgui_container_t *demo_view_dc(void)
+rtgui_view_t *demo_view_dc(rtgui_workbench_t* workbench)
 {
-	rtgui_container_t *view;
+	rtgui_view_t *view;
 
-	view = demo_view("DC Demo");
+	view = demo_view(workbench, "DC Demo");
 	if (view != RT_NULL)
 		/* 设置成自己的事件处理函数 */
-		rtgui_object_set_event_handler(RTGUI_OBJECT(view), dc_event_handler);
+		rtgui_widget_set_event_handler(RTGUI_WIDGET(view), dc_event_handler);
 
 	return view;
 }

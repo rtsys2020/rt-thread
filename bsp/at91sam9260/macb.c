@@ -294,9 +294,8 @@ static int macb_phy_init(rt_device_t dev)
 	}
 }
 
-void macb_update_link(void *param)
+void macb_update_link(struct rt_macb_eth *macb)
 {
-	struct rt_macb_eth *macb = (struct rt_macb_eth *)param;
 	rt_device_t dev = &macb->parent.parent;
 	rt_uint32_t status, status_change = 0;
 	rt_uint32_t link;
@@ -325,12 +324,13 @@ void macb_update_link(void *param)
 			rt_kprintf("%s: link up (%dMbps/%s-duplex)\n",
 					dev->parent.name, macb->speed,
 					DUPLEX_FULL == macb->duplex ? "Full":"Half");
-			eth_device_linkchange(&macb->parent, RT_TRUE);
+			macb->parent.link_status = 1;
 		} else {
 			rt_kprintf("%s: link down\n", dev->parent.name);
-			eth_device_linkchange(&macb->parent, RT_FALSE);
+					macb->parent.link_status = 0;
 		}
 
+		eth_device_linkchange(&macb->parent, RT_TRUE);
 	}
 
 }
@@ -408,7 +408,7 @@ static rt_err_t rt_macb_init(rt_device_t dev)
 
 	rt_timer_init(&macb->timer, "link_timer", 
 		macb_update_link, 
-		(void *)macb, 
+		macb, 
 		RT_TICK_PER_SECOND, 
 		RT_TIMER_FLAG_PERIODIC);
 
@@ -471,7 +471,7 @@ rt_err_t rt_macb_tx( rt_device_t dev, struct pbuf* p)
 	buf = rt_malloc(p->tot_len);
 	if (!buf) {
 		rt_kprintf("%s:alloc buf failed\n", __func__);
-		return -RT_ENOMEM;
+		return NULL;
 	}
 	bufptr = buf;
 

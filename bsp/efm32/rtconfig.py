@@ -1,32 +1,14 @@
-import os
-
 # toolchains options
 ARCH        = 'arm'
 CPU         = 'cortex-m3'
 CROSS_TOOL  = 'gcc'
 
-if os.getenv('RTT_CC'):
-	CROSS_TOOL = os.getenv('RTT_CC')
-
 if CROSS_TOOL == 'gcc':
     PLATFORM    = 'gcc'
     EXEC_PATH   = 'C:\Program Files (x86)\CodeSourcery\Sourcery G++ Lite\bin'
     #EXEC_PATH  = 'C:\Program Files (x86)\yagarto\bin'
-elif CROSS_TOOL == 'keil':
-    print '================ERROR============================'
-    print 'Not support keil yet!'
-    print '================================================='
-    exit(0)
-elif CROSS_TOOL == 'iar':
-    print '================ERROR============================'
-    print 'Not support iar yet!'
-    print '================================================='
-    exit(0)
 
-if os.getenv('RTT_EXEC_PATH'):
-	EXEC_PATH = os.getenv('RTT_EXEC_PATH')
-
-BUILD = 'debug'
+BUILD = 'run'
 # EFM32_BOARD		=  'EFM32_G8XX_STK'
 # EFM32_BOARD		=  'EFM32_GXXX_DK'
 EFM32_BOARD		=  'EFM32GG_DK3750'
@@ -40,8 +22,8 @@ elif EFM32_BOARD == 'EFM32_GXXX_DK':
 elif EFM32_BOARD == 'EFM32GG_DK3750':
     EFM32_FAMILY = 'Giant Gecko'
     EFM32_TYPE = 'EFM32GG990F1024'
-#    EFM32_LCD =  'LCD_MAPPED'
-    EFM32_LCD =  'LCD_DIRECT'
+    EFM32_LCD =  'Mapped'
+#    EFM32_LCD =  'Direct'
 
 if PLATFORM == 'gcc':
     # toolchains

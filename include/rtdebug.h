@@ -1,7 +1,7 @@
 /*
  * File      : rtdebug.h
  * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2006 - 2012, RT-Thread Development Team
+ * COPYRIGHT (C) 2006 - 2011, RT-Thread Development Team
  *
  * The license and distribution terms for this file may be
  * found in the file LICENSE in this distribution or at
@@ -19,10 +19,6 @@
 /* Turn on some of these (set to non-zero) to debug kernel */
 #ifndef RT_DEBUG_MEM
 #define RT_DEBUG_MEM        0
-#endif
-
-#ifndef RT_DEBUG_MEMHEAP
-#define RT_DEBUG_MEMHEAP	0
 #endif
 
 #ifndef RT_DEBUG_MODULE
@@ -81,5 +77,7 @@
 #define RT_DEBUG_NOT_IN_INTERRUPT
 
 #endif /* RT_DEBUG */
+
+
 
 #endif /* __RTDEBUG_H__ */
