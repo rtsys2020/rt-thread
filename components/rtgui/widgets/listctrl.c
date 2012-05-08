@@ -20,7 +20,7 @@ static void rtgui_listctrl_update_current(struct rtgui_listctrl* ctrl, rt_uint16
 static void _rtgui_listctrl_constructor(struct rtgui_listctrl *ctrl)
 {
 	/* set default widget rect and set event handler */
-	rtgui_object_set_event_handler(RTGUI_OBJECT(ctrl), rtgui_listctrl_event_handler);
+	rtgui_widget_set_event_handler(RTGUI_WIDGET(ctrl),rtgui_listctrl_event_handler);
 
 	RTGUI_WIDGET(ctrl)->flag |= RTGUI_WIDGET_FLAG_FOCUSABLE;
 
@@ -34,7 +34,7 @@ static void _rtgui_listctrl_constructor(struct rtgui_listctrl *ctrl)
 	RTGUI_WIDGET_TEXTALIGN(RTGUI_WIDGET(ctrl)) = RTGUI_ALIGN_CENTER_VERTICAL;
 }
 
-DEFINE_CLASS_TYPE(listctrl, "listctrl",
+DEFINE_CLASS_TYPE(listctrl, "listctrl", 
 	RTGUI_WIDGET_TYPE,
 	_rtgui_listctrl_constructor,
 	RT_NULL,
@@ -206,12 +206,11 @@ void rtgui_listctrl_update_current(struct rtgui_listctrl* ctrl, rt_uint16_t old_
 	rtgui_dc_end_drawing(dc);
 }
 
-rt_bool_t rtgui_listctrl_event_handler(struct rtgui_object* object, struct rtgui_event* event)
+rt_bool_t rtgui_listctrl_event_handler(struct rtgui_widget* widget, struct rtgui_event* event)
 {
-	struct rtgui_listctrl* ctrl;
-	RTGUI_WIDGET_EVENT_HANDLER_PREPARE
+	struct rtgui_listctrl* ctrl = RT_NULL;
 
-	ctrl = RTGUI_LISTCTRL(object);
+	ctrl = RTGUI_LISTCTRL(widget);
 	switch (event->type)
 	{
 	case RTGUI_EVENT_PAINT:
@@ -293,7 +292,7 @@ rt_bool_t rtgui_listctrl_event_handler(struct rtgui_object* object, struct rtgui
 						/* up event */
 						if (ctrl->on_item != RT_NULL)
 						{
-							ctrl->on_item(RTGUI_OBJECT(ctrl), RT_NULL);
+							ctrl->on_item(RTGUI_WIDGET(ctrl), RT_NULL);
 						}
 					}
 				}
@@ -344,7 +343,7 @@ rt_bool_t rtgui_listctrl_event_handler(struct rtgui_object* object, struct rtgui
 				case RTGUIK_RETURN:
                     if (ctrl->on_item != RT_NULL)
 					{
-						ctrl->on_item(RTGUI_OBJECT(ctrl), RT_NULL);
+						ctrl->on_item(RTGUI_WIDGET(ctrl), RT_NULL);
 					}
 					return RT_FALSE;
 
@@ -357,10 +356,10 @@ rt_bool_t rtgui_listctrl_event_handler(struct rtgui_object* object, struct rtgui
 	}
 
     /* use ctrl event handler */
-    return rtgui_widget_event_handler(RTGUI_OBJECT(widget), event);
+    return rtgui_widget_event_handler(widget, event);
 }
 
-rtgui_listctrl_t* rtgui_listctrl_create(rt_uint32_t items, rt_uint16_t count, rtgui_rect_t *rect,
+rtgui_listctrl_t* rtgui_listctrl_create(rt_uint32_t items, rt_uint16_t count, rtgui_rect_t *rect, 
 										rtgui_onitem_draw_t ondraw)
 {
 	struct rtgui_listctrl* ctrl = RT_NULL;
@@ -385,7 +384,7 @@ void rtgui_listctrl_destroy(rtgui_listctrl_t* ctrl)
 	rtgui_widget_destroy(RTGUI_WIDGET(ctrl));
 }
 
-void rtgui_listctrl_set_onitem(rtgui_listctrl_t* ctrl, rtgui_event_handler_ptr func)
+void rtgui_listctrl_set_onitem(rtgui_listctrl_t* ctrl, rtgui_onitem_func_t func)
 {
 	RT_ASSERT(ctrl != RT_NULL);
 
@@ -395,7 +394,7 @@ void rtgui_listctrl_set_onitem(rtgui_listctrl_t* ctrl, rtgui_event_handler_ptr f
 void rtgui_listctrl_set_items(rtgui_listctrl_t* ctrl, rt_uint32_t items, rt_uint16_t count)
 {
 	rtgui_rect_t rect;
-
+	
 	ctrl->items = items;
 	ctrl->items_count = count;
 	ctrl->current_item = 0;

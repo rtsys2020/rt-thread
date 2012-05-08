@@ -1,7 +1,7 @@
 /*
  * File      : clock.c
  * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2006 - 2012, RT-Thread Development Team
+ * COPYRIGHT (C) 2006 - 2011, RT-Thread Development Team
  *
  * The license and distribution terms for this file may be
  * found in the file LICENSE in this distribution or at
@@ -21,7 +21,7 @@
 #include <rthw.h>
 #include <rtthread.h>
 
-static rt_tick_t rt_tick = 0;
+static volatile rt_tick_t rt_tick;
 
 extern void rt_timer_check(void);
 
@@ -29,11 +29,10 @@ extern void rt_timer_check(void);
  * This function will init system tick and set it to zero.
  * @ingroup SystemInit
  *
- * @deprecated since 1.1.0, this function does not need to be invoked
- * in the system initialization.
  */
 void rt_system_tick_init(void)
 {
+	rt_tick = 0;
 }
 
 /**
@@ -59,9 +58,10 @@ rt_tick_t rt_tick_get(void)
 void rt_tick_set(rt_tick_t tick)
 {
 	rt_base_t level;
-
 	level = rt_hw_interrupt_disable();
+
 	rt_tick = tick;
+	
 	rt_hw_interrupt_enable(level);
 }
 

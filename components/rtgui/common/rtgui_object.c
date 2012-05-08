@@ -17,10 +17,9 @@
 
 static void _rtgui_object_constructor(rtgui_object_t *object)
 {
-   if (!object)
-       return;
+   if (!object) return;
 
-   object->flag = RTGUI_OBJECT_FLAG_NONE;
+   object->is_static = RT_FALSE;
 }
 
 /* Destroys the object */
@@ -29,7 +28,7 @@ static void _rtgui_object_destructor(rtgui_object_t *object)
 	/* nothing */
 }
 
-DEFINE_CLASS_TYPE(type, "object",
+DEFINE_CLASS_TYPE(type, "object", 
 	RT_NULL,
 	_rtgui_object_constructor,
 	_rtgui_object_destructor,
@@ -116,6 +115,7 @@ rtgui_object_t *rtgui_object_create(rtgui_type_t *object_type)
 #endif
 
 	new_object->type = object_type;
+	new_object->is_static = RT_FALSE;
 
 	rtgui_type_object_construct(object_type, new_object);
 
@@ -131,8 +131,7 @@ rtgui_object_t *rtgui_object_create(rtgui_type_t *object_type)
  */
 void rtgui_object_destroy(rtgui_object_t *object)
 {
-	if (!object || object->flag & RTGUI_OBJECT_FLAG_STATIC)
-        return;
+	if (!object || object->is_static == RT_TRUE) return;
 
 #ifdef RTGUI_OBJECT_TRACE
 	obj_info.objs_number --;
@@ -177,17 +176,5 @@ const rtgui_type_t *rtgui_object_object_type_get(rtgui_object_t *object)
 	if (!object) return RT_NULL;
 
 	return object->type;
-}
-
-void rtgui_object_set_event_handler(struct rtgui_object *object, rtgui_event_handler_ptr handler)
-{
-	RT_ASSERT(object != RT_NULL);
-
-	object->event_handler = handler;
-}
-
-rt_bool_t rtgui_object_event_handler(struct rtgui_object *object, struct rtgui_event* event)
-{
-	return RT_FALSE;
 }
 

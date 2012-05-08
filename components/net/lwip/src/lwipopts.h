@@ -3,7 +3,7 @@
 
 #include <rtconfig.h>
 
-#define ERRNO                       1
+#define ERRNO						1
 
 #define NO_SYS                      0
 #define LWIP_SOCKET                 1
@@ -30,7 +30,7 @@
 #ifdef RT_LWIP_DNS
 #define LWIP_DNS                    1
 #else
-#define LWIP_DNS                    0
+#define LWIP_DNS					0
 #endif
 
 #define LWIP_HAVE_LOOPIF            0
@@ -39,7 +39,13 @@
 #define BYTE_ORDER                  LITTLE_ENDIAN
 
 /* Enable SO_RCVTIMEO processing.   */
-#define LWIP_SO_RCVTIMEO            1
+#define LWIP_SO_RCVTIMEO 			1
+
+#ifdef RT_USING_NEWLIB
+/* use timeval structure in newlib */
+#define LWIP_TIMEVAL_PRIVATE 0
+#include <sys/time.h>
+#endif
 
 /* #define RT_LWIP_DEBUG */
 
@@ -50,7 +56,7 @@
 /* ---------- Debug options ---------- */
 #ifdef LWIP_DEBUG
 #define SYS_DEBUG                   LWIP_DBG_OFF
-#define ETHARP_DEBUG                LWIP_DBG_OFF
+#define ETHARP_DEBUG				LWIP_DBG_OFF
 #define PPP_DEBUG                   LWIP_DBG_OFF
 #define MEM_DEBUG                   LWIP_DBG_OFF
 #define MEMP_DEBUG                  LWIP_DBG_OFF
@@ -90,15 +96,15 @@
 #define mem_calloc                  rt_calloc
 
 #ifdef RT_LWIP_USING_RT_MEM
-#define MEMP_MEM_MALLOC             1
+#define MEMP_MEM_MALLOC				1
 #else
-#define MEMP_MEM_MALLOC             0
+#define MEMP_MEM_MALLOC				0
 #endif
 
 /* MEMP_NUM_PBUF: the number of memp struct pbufs. If the application
    sends a lot of data out of ROM (or other static memory), this
    should be set high. */
-#define MEMP_NUM_PBUF               16
+#define MEMP_NUM_PBUF               32
 
 /* the number of UDP protocol control blocks. One per active RAW "connection". */
 #ifdef RT_LWIP_RAW_PCB_NUM
@@ -118,14 +124,20 @@
 /* the number of simultaneously queued TCP */
 #ifdef RT_LWIP_TCP_SEG_NUM
 #define MEMP_NUM_TCP_SEG            RT_LWIP_TCP_SEG_NUM
+#else
+#define MEMP_NUM_TCP_SEG            TCP_SND_QUEUELEN
 #endif
+
+/* MEMP_NUM_SYS_TIMEOUT: the number of simulateously active
+   timeouts. */
+#define MEMP_NUM_SYS_TIMEOUT        8
 
 /* The following four are used only with the sequential API and can be
    set to 0 if the application only will use the raw API. */
 /* MEMP_NUM_NETBUF: the number of struct netbufs. */
 #define MEMP_NUM_NETBUF             2
 /* MEMP_NUM_NETCONN: the number of struct netconns. */
-#define MEMP_NUM_NETCONN            4
+#define MEMP_NUM_NETCONN            10
 /* MEMP_NUM_TCPIP_MSG_*: the number of struct tcpip_msg, which is used
    for sequential API communication and incoming packets. Used in
    src/api/tcpip.c. */
@@ -139,17 +151,17 @@
 #endif
 
 /* PBUF_POOL_BUFSIZE: the size of each pbuf in the pbuf pool. */
-#ifdef RT_LWIP_PBUF_POOL_BUFSIZE
-#define PBUF_POOL_BUFSIZE			 RT_LWIP_PBUF_POOL_BUFSIZE
-#endif
+#define PBUF_POOL_BUFSIZE           1500
 
 /* PBUF_LINK_HLEN: the number of bytes that should be allocated for a
    link level header. */
 #define PBUF_LINK_HLEN              16
 
 #ifdef RT_LWIP_ETH_PAD_SIZE
-#define ETH_PAD_SIZE                RT_LWIP_ETH_PAD_SIZE
+#define ETH_PAD_SIZE				RT_LWIP_ETH_PAD_SIZE
 #endif
+
+#define LWIP_NETIF_LINK_CALLBACK	1
 
 /** SYS_LIGHTWEIGHT_PROT
  * define SYS_LIGHTWEIGHT_PROT in lwipopts.h if you want inter-task protection
@@ -192,9 +204,9 @@
 
 /* TCP receive window. */
 #ifdef RT_LWIP_TCP_WND
-#define TCP_WND                     RT_LWIP_TCP_WND
+#define TCP_WND                 	RT_LWIP_TCP_WND
 #else
-#define TCP_WND                     (TCP_MSS * 2)
+#define TCP_WND                 	(TCP_MSS * 2)
 #endif
 
 /* Maximum number of retransmissions of data segments. */
@@ -229,10 +241,10 @@
 
 /* IP reassembly and segmentation.These are orthogonal even
  * if they both deal with IP fragments */
-#define IP_REASSEMBLY               0
+#define IP_REASSEMBLY               1
 #define IP_REASS_MAX_PBUFS          10
 #define MEMP_NUM_REASSDATA          10
-#define IP_FRAG                     0
+#define IP_FRAG                     1
 
 /* ---------- ICMP options ---------- */
 #define ICMP_TTL                    255
@@ -319,14 +331,7 @@
 #endif /* PPP_SUPPORT */
 
 /* no read/write/close for socket */
-#define LWIP_POSIX_SOCKETS_IO_NAMES 0
-#define LWIP_NETIF_API  1
-
-/* MEMP_NUM_SYS_TIMEOUT: the number of simulateously active timeouts. */
-#define MEMP_NUM_SYS_TIMEOUT       (LWIP_TCP + IP_REASSEMBLY + LWIP_ARP + (2*LWIP_DHCP) + LWIP_AUTOIP + LWIP_IGMP + LWIP_DNS + PPP_SUPPORT)
-#ifdef LWIP_IGMP
-#include <stdlib.h>
-#define LWIP_RAND                  rand
-#endif
+#define LWIP_POSIX_SOCKETS_IO_NAMES	0
+#define LWIP_NETIF_API	1
 
 #endif /* __LWIPOPTS_H__ */

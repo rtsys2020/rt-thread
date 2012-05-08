@@ -1,26 +1,17 @@
-import os
-
 # toolchains options
 ARCH='arm'
 CPU='cortex-m3'
 CROSS_TOOL='keil'
 
-if os.getenv('RTT_CC'):
-	CROSS_TOOL = os.getenv('RTT_CC')
-
 if  CROSS_TOOL == 'gcc':
 	PLATFORM 	= 'gcc'
-	EXEC_PATH 	= 'C:/Program Files (x86)/CodeSourcery/Sourcery G++ Lite/bin'
+	EXEC_PATH 	= 'E:/Program Files/CodeSourcery/Sourcery G++ Lite/bin'
 elif CROSS_TOOL == 'keil':
 	PLATFORM 	= 'armcc'
 	EXEC_PATH 	= 'E:/Keil'
 elif CROSS_TOOL == 'iar':
 	PLATFORM 	= 'iar'
-	IAR_PATH 	= 'C:/Program Files/IAR Systems/Embedded Workbench 6.0 Evaluation'
-
-if os.getenv('RTT_EXEC_PATH'):
-	EXEC_PATH = os.getenv('RTT_EXEC_PATH')
-
+	EXEC_PATH 	= 'E:/Program Files/IAR Systems/Embedded Workbench 6.0/arm/bin'
 BUILD = 'debug'
 
 if PLATFORM == 'gcc':
@@ -30,15 +21,15 @@ if PLATFORM == 'gcc':
     AS = PREFIX + 'gcc'
     AR = PREFIX + 'ar'
     LINK = PREFIX + 'gcc'
-    TARGET_EXT = 'elf'
+    TARGET_EXT = 'axf'
     SIZE = PREFIX + 'size'
     OBJDUMP = PREFIX + 'objdump'
     OBJCPY = PREFIX + 'objcopy'
 
     DEVICE = ' -mcpu=cortex-m3 -mthumb'
-    CFLAGS = DEVICE
+    CFLAGS = DEVICE + ' -DRT_USING_MINILIBC'
     AFLAGS = ' -c' + DEVICE + ' -x assembler-with-cpp'
-    LFLAGS = DEVICE + ' -Wl,--gc-sections,-Map=rtthread-lpc17xx.map,-cref,-u,Reset_Handler -T rtthread-lpc17xx.ld'
+    LFLAGS = DEVICE + ' -Wl,--gc-sections,-Map=rtthread-lpc17xx.map,-cref,-u,Reset_Handler -T lpc17xx_rom.ld'
 
     CPATH = ''
     LPATH = ''
@@ -62,7 +53,7 @@ elif PLATFORM == 'armcc':
     DEVICE = ' --device DARMP1'
     CFLAGS = DEVICE + ' --apcs=interwork'
     AFLAGS = DEVICE
-    LFLAGS = DEVICE + ' --info sizes --info totals --info unused --info veneers --list rtthread-lpc17xx.map --scatter rtthread-lpc17xx.sct'
+    LFLAGS = DEVICE + ' --info sizes --info totals --info unused --info veneers --list rtthread-lpc17xx.map --scatter lpc17xx_rom.sct'
 
     CFLAGS += ' -I' + EXEC_PATH + '/ARM/RV31/INC'
     LFLAGS += ' --libpath ' + EXEC_PATH + '/ARM/RV31/LIB'
@@ -85,37 +76,12 @@ elif PLATFORM == 'iar':
     LINK = 'ilinkarm'
     TARGET_EXT = 'out'
 
-    DEVICE = ' --thumb'
+    DEVICE = ' --cpu DARMP1 --thumb'
 
-    CFLAGS = DEVICE
-    CFLAGS += ' --diag_suppress Pa050'
-    CFLAGS += ' --no_cse' 
-    CFLAGS += ' --no_unroll' 
-    CFLAGS += ' --no_inline' 
-    CFLAGS += ' --no_code_motion' 
-    CFLAGS += ' --no_tbaa' 
-    CFLAGS += ' --no_clustering' 
-    CFLAGS += ' --no_scheduling' 
-    CFLAGS += ' --debug' 
-    CFLAGS += ' --endian=little' 
-    CFLAGS += ' --cpu=Cortex-M3' 
-    CFLAGS += ' -e' 
-    CFLAGS += ' --fpu=None'
-    CFLAGS += ' --dlib_config "' + IAR_PATH + '/arm/INC/c/DLib_Config_Normal.h"'    
-    CFLAGS += ' -Ol'    
-    CFLAGS += ' --use_c++_inline'
-        
+    CFLAGS = ''
     AFLAGS = ''
-    AFLAGS += ' -s+' 
-    AFLAGS += ' -w+' 
-    AFLAGS += ' -r' 
-    AFLAGS += ' --cpu Cortex-M3' 
-    AFLAGS += ' --fpu None'
+    LFLAGS = ' --config lpc17xx_flash.icf'
 
-    LFLAGS = ' --config rtthread-lpc17xx.icf'
-    LFLAGS += ' --semihosting' 
-    LFLAGS += ' --entry __iar_program_start'    
-
-    EXEC_PATH = IAR_PATH + '/arm/bin/'
+    EXEC_PATH += '/arm/bin/'
     RT_USING_MINILIBC = False
     POST_ACTION = ''

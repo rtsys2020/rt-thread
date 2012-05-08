@@ -3,12 +3,7 @@ Import('RTT_ROOT')
 from building import *
 
 src_c = ['application.c', 'startup.c', 'board.c', 'bsp.c', 'uart.c']
-
-# add for startup script 
-if rtconfig.CROSS_TOOL == 'gcc':
-    src_asm = ['start.S', 'vects.S', 'interrupts.S']
-elif rtconfig.CROSS_TOOL == 'iar':
-    src_asm = ['cstartup.asm', 'interrupts.asm', 'vectors.asm']
+src_asm = ['cstartup.asm', 'interrupts.asm', 'vectors.asm']
 
 src	= File(src_c + src_asm)
 

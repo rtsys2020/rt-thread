@@ -1,7 +1,7 @@
 /*
  * 程序清单：DC操作演示
  *
- * 这个例子会在创建出的container上进行DC操作的演示
+ * 这个例子会在创建出的view上进行DC操作的演示
  */
 
 #include "demo_view.h"
@@ -13,11 +13,10 @@
 #include <math.h>
 
 /*
- * container的事件处理函数
+ * view的事件处理函数
  */
-rt_bool_t instrument_panel_event_handler(struct rtgui_object *object, rtgui_event_t *event)
+rt_bool_t instrument_panel_event_handler(rtgui_widget_t* widget, rtgui_event_t *event)
 {
-	struct rtgui_widget *widget = RTGUI_WIDGET(object);
 	char ac[4];
 	int i;
 	int x0 = 120;
@@ -34,10 +33,10 @@ rt_bool_t instrument_panel_event_handler(struct rtgui_object *object, rtgui_even
 		const int arrowy[] = {170-5,  170+5,  170};
 
 		/*
-		 * 因为用的是demo container，上面本身有一部分控件，所以在绘图时先要让demo container
+		 * 因为用的是demo view，上面本身有一部分控件，所以在绘图时先要让demo view
 		 * 先绘图
 		 */
-		rtgui_container_event_handler(RTGUI_OBJECT(widget), event);
+		rtgui_view_event_handler(widget, event);
 
 		/************************************************************************/
 		/* 下面的是DC的操作                                                     */
@@ -49,8 +48,8 @@ rt_bool_t instrument_panel_event_handler(struct rtgui_object *object, rtgui_even
 		if (dc == RT_NULL)
 			return RT_FALSE;
 
-		/* 获得demo container允许绘图的区域 */
-		demo_view_get_rect(RTGUI_CONTAINER(widget), &rect);
+		/* 获得demo view允许绘图的区域 */
+		demo_view_get_rect(RTGUI_VIEW(widget), &rect);
 
 		RTGUI_DC_TEXTALIGN(dc) = RTGUI_ALIGN_BOTTOM | RTGUI_ALIGN_CENTER_HORIZONTAL;
 		/* 显示GUI的版本信息 */
@@ -129,21 +128,21 @@ rt_bool_t instrument_panel_event_handler(struct rtgui_object *object, rtgui_even
 	else
 	{
 		/* 其他事件，调用默认的事件处理函数 */
-		return rtgui_container_event_handler(RTGUI_OBJECT(widget), event);
+		return rtgui_view_event_handler(widget, event);
 	}
 
 	return RT_FALSE;
 }
 
 /* 创建用于DC操作演示用的视图 */
-rtgui_container_t *demo_view_instrument_panel(void)
+rtgui_view_t *demo_view_instrument_panel(rtgui_workbench_t* workbench)
 {
-	rtgui_container_t *container;
+	rtgui_view_t *view;
 
-	container = demo_view("instrument panel Demo");
-	if (container != RT_NULL)
+	view = demo_view(workbench, "instrument panel Demo");
+	if (view != RT_NULL)
 		/* 设置成自己的事件处理函数 */
-		rtgui_object_set_event_handler(RTGUI_OBJECT(container), instrument_panel_event_handler);
+		rtgui_widget_set_event_handler(RTGUI_WIDGET(view), instrument_panel_event_handler);
 
-	return container;
+	return view;
 }

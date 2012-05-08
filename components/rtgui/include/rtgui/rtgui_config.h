@@ -26,7 +26,7 @@
 	/* support Chinese font */
 	#define RTGUI_USING_FONTHZ
 	/* support FreeType TTF font */
-	//#define RTGUI_USING_TTF
+	// #define RTGUI_USING_TTF
 	/* use small size in RTGUI */
 	#define RTGUI_USING_SMALL_SIZE
 	/* use mouse cursor */
@@ -72,10 +72,4 @@
 #define RTGUI_APP_THREAD_STACK_SIZE		2048
 #endif
 
-#define RTGUI_USING_CAST_CHECK
-
-//#define RTGUI_USING_DESKTOP_WINDOW
-
-#define  RTGUI_EVENT_DEBUG
-#undef RTGUI_USING_SMALL_SIZE
 #endif

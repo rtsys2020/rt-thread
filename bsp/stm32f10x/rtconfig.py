@@ -1,12 +1,7 @@
-import os
-
 # toolchains options
 ARCH='arm'
 CPU='cortex-m3'
 CROSS_TOOL='keil'
-
-if os.getenv('RTT_CC'):
-	CROSS_TOOL = os.getenv('RTT_CC')
 
 #device options
 # STM32_TYPE = 
@@ -31,10 +26,7 @@ elif CROSS_TOOL == 'keil':
 	EXEC_PATH 	= 'E:/Keil'
 elif CROSS_TOOL == 'iar':
 	PLATFORM 	= 'iar'
-	IAR_PATH 	= 'C:/Program Files/IAR Systems/Embedded Workbench 6.0 Evaluation'
-
-if os.getenv('RTT_EXEC_PATH'):
-	EXEC_PATH = os.getenv('RTT_EXEC_PATH')
+	IAR_PATH 	= 'E:/Program Files/IAR Systems/Embedded Workbench 6.0'
 
 BUILD = 'debug'
 

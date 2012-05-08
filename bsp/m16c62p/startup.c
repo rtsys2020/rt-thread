@@ -28,10 +28,8 @@ extern void finsh_set_device(const char* device);
 #endif
 
 #ifdef RT_USING_HEAP
-#if (defined (__ICCM16C__))
+#ifdef __ICCM16C__
 #pragma section="DATA16_HEAP"
-#elif (defined (__GNUC__))
-extern unsigned char user_ram_end;
 #endif
 #endif
 
@@ -61,8 +59,6 @@ void rtthread_startup(void)
 #ifdef RT_USING_HEAP
 #ifdef __ICCM16C__
 	rt_system_heap_init(__segment_begin("DATA16_HEAP"), __segment_end("DATA16_HEAP"));
-#elif (defined (__GNUC__))
-	rt_system_heap_init((void*)&user_ram_end, (void*)M16C62P_SRAM_END);
 #endif
 #endif
 
@@ -85,7 +81,7 @@ void rtthread_startup(void)
 
 	/* init timer thread */
 	rt_system_timer_thread_init();
-
+    
 	/* init idle thread */
 	rt_thread_idle_init();
     

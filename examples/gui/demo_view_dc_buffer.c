@@ -16,9 +16,8 @@ static struct rtgui_dc *dc_buffer;
 /*
  * view的事件处理函数
  */
-static rt_bool_t dc_buffer_event_handler(struct rtgui_object* object, rtgui_event_t *event)
+static rt_bool_t dc_buffer_event_handler(rtgui_widget_t* widget, rtgui_event_t *event)
 {
-	struct rtgui_widget *widget = RTGUI_WIDGET(object);
 
 	/* 仅对PAINT事件进行处理 */
 	if (event->type == RTGUI_EVENT_PAINT)
@@ -30,7 +29,7 @@ static rt_bool_t dc_buffer_event_handler(struct rtgui_object* object, rtgui_even
 		 * 因为用的是demo view，上面本身有一部分控件，所以在绘图时先要让demo view
 		 * 先绘图
 		 */
-		rtgui_container_event_handler(object, event);
+		rtgui_view_event_handler(widget, event);
 
 		/* 获得控件所属的DC */
 		dc = rtgui_dc_begin_drawing(widget);
@@ -39,7 +38,7 @@ static rt_bool_t dc_buffer_event_handler(struct rtgui_object* object, rtgui_even
 			return RT_FALSE;
 
 		/* 获得demo view允许绘图的区域 */
-		demo_view_get_logic_rect(RTGUI_CONTAINER(widget), &rect);
+		demo_view_get_logic_rect(RTGUI_VIEW(widget), &rect);
 
 		rect.x1 += 10;
 		rect.y1 += 10;
@@ -51,16 +50,16 @@ static rt_bool_t dc_buffer_event_handler(struct rtgui_object* object, rtgui_even
 	else
 	{
 		/* 其他事件，调用默认的事件处理函数 */
-		return rtgui_container_event_handler(object, event);
+		return rtgui_view_event_handler(widget, event);
 	}
 
 	return RT_FALSE;
 }
 
 /* 创建用于DC Buffer操作演示用的视图 */
-rtgui_container_t *demo_view_dc_buffer()
+rtgui_view_t *demo_view_dc_buffer(rtgui_workbench_t* workbench)
 {
-	rtgui_container_t *view;
+	rtgui_view_t *view;
 
 	if (dc_buffer == RT_NULL)
 	{
@@ -75,10 +74,10 @@ rtgui_container_t *demo_view_dc_buffer()
 		rtgui_dc_draw_circle(dc_buffer, 25, 25, 10);
 	}
 
-	view = demo_view("缓冲DC演示");
+	view = demo_view(workbench, "缓冲DC演示");
 	if (view != RT_NULL)
 		/* 设置成自己的事件处理函数 */
-		rtgui_object_set_event_handler(RTGUI_OBJECT(view), dc_buffer_event_handler);
+		rtgui_widget_set_event_handler(RTGUI_WIDGET(view), dc_buffer_event_handler);
 
 	return view;
 }

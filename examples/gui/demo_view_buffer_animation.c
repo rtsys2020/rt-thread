@@ -1,6 +1,6 @@
 #include <rtgui/dc.h>
 #include <rtgui/rtgui_system.h>
-#include <rtgui/widgets/container.h>
+#include <rtgui/widgets/view.h>
 #include "demo_view.h"
 
 /*
@@ -28,7 +28,7 @@ static void timeout(struct rtgui_timer* timer, void* parameter)
 		return ;
 
 	/* 获得demo view允许绘图的区域，主要用于判断边界 */
-	demo_view_get_logic_rect(RTGUI_CONTAINER(widget), &rect);
+	demo_view_get_logic_rect(RTGUI_VIEW(widget), &rect);
 	rect.y2 -= 5;
 
 	/* 判断是否是第一次绘图 */
@@ -56,17 +56,15 @@ static void timeout(struct rtgui_timer* timer, void* parameter)
 	rtgui_dc_end_drawing(dc);
 }
 
-static rt_bool_t animation_event_handler(struct rtgui_object *object, rtgui_event_t *event)
+static rt_bool_t animation_event_handler(rtgui_widget_t* widget, rtgui_event_t *event)
 {
-	struct rtgui_widget *widget = RTGUI_WIDGET(object);
-
 	if (event->type == RTGUI_EVENT_PAINT)
 	{
 		struct rtgui_dc* dc;
 		rtgui_rect_t rect;
 
 		/* 因为用的是demo view，上面本身有一部分控件，所以在绘图时先要让demo view先绘图 */
-		rtgui_container_event_handler(object, event);
+		rtgui_view_event_handler(widget, event);
 
 		/* 获得控件所属的DC */
 		dc = rtgui_dc_begin_drawing(widget);
@@ -74,7 +72,7 @@ static rt_bool_t animation_event_handler(struct rtgui_object *object, rtgui_even
 			return RT_FALSE;
 
         /* 获得demo view允许绘图的区域 */
-        demo_view_get_logic_rect(RTGUI_CONTAINER(widget), &rect);
+        demo_view_get_logic_rect(RTGUI_VIEW(widget), &rect);
 
 		/* 绘图 */
 		rect = text_rect;
@@ -87,37 +85,21 @@ static rt_bool_t animation_event_handler(struct rtgui_object *object, rtgui_even
 	else
 	{
 		/* 调用默认的事件处理函数 */
-		return rtgui_container_event_handler(object, event);
+		return rtgui_view_event_handler(widget, event);
 	}
 
 	return RT_FALSE;
 }
 
-static rt_bool_t animation_on_show(struct rtgui_object *object, struct rtgui_event *event)
+rtgui_view_t *demo_view_buffer_animation(rtgui_workbench_t* workbench)
 {
-	rt_kprintf("buffer animation on show\n");
-	rtgui_timer_start(timer);
+	rtgui_view_t *view;
 
-	return RT_TRUE;
-}
+	view = demo_view(workbench, "DC 缓冲区动画");
+	if (view != RT_NULL)
+		rtgui_widget_set_event_handler(RTGUI_WIDGET(view), animation_event_handler);
 
-static rt_bool_t animation_on_hide(struct rtgui_object *object, struct rtgui_event *event)
-{
-	rt_kprintf("buffer animation on hide\n");
-	rtgui_timer_stop(timer);
-
-	return RT_TRUE;
-}
-
-struct rtgui_container *demo_view_buffer_animation(void)
-{
-	struct rtgui_container *container;
-
-	container= demo_view("DC 缓冲区动画");
-	if (container!= RT_NULL)
-		rtgui_object_set_event_handler(RTGUI_OBJECT(container), animation_event_handler);
-
-	rtgui_font_get_metrics(RTGUI_WIDGET_FONT(RTGUI_WIDGET(container)), "缓冲动画", &text_rect);
+	rtgui_font_get_metrics(RTGUI_WIDGET_FONT(RTGUI_WIDGET(view)), "缓冲动画", &text_rect);
 	if (dc_buffer == RT_NULL)
 	{
 		rtgui_rect_t rect;
@@ -127,7 +109,7 @@ struct rtgui_container *demo_view_buffer_animation(void)
 
 		/* 创建 DC Buffer，长 50，宽 50 */
 		dc_buffer = rtgui_dc_buffer_create(rtgui_rect_width(rect), rtgui_rect_height(rect));
-		RTGUI_DC_FC(dc_buffer) = RTGUI_WIDGET_BACKGROUND(RTGUI_WIDGET(container));
+		RTGUI_DC_FC(dc_buffer) = RTGUI_WIDGET_BACKGROUND(RTGUI_WIDGET(view));
 		rtgui_dc_fill_rect(dc_buffer, &rect);
 		RTGUI_DC_FC(dc_buffer) = black;
 		rect.x1 = 1; rect.y1 = 1;
@@ -135,10 +117,8 @@ struct rtgui_container *demo_view_buffer_animation(void)
 	}
 
 	/* 启动定时器以触发动画 */
-	timer = rtgui_timer_create(1, RT_TIMER_FLAG_PERIODIC, timeout, (void*)container);
+	timer = rtgui_timer_create(1, RT_TIMER_FLAG_PERIODIC, timeout, (void*)view);
+	rtgui_timer_start(timer);
 
-	rtgui_widget_set_onshow(RTGUI_WIDGET(container), animation_on_show);
-	rtgui_widget_set_onhide(RTGUI_WIDGET(container), animation_on_hide);
-
-	return container;
+	return view;
 }

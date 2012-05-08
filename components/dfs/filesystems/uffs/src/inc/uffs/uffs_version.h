@@ -30,21 +30,20 @@
   on this file might be covered by the GNU General Public License.
 */
 
-#ifndef _UFFS_VERSION_H_
-#define _UFFS_VERSION_H_
+#ifndef UFFS_VERSION_H
+#define UFFS_VERSION_H
 
 #ifdef __cplusplus
 extern "C"{
 #endif
 
 
-#define UFFS_VERSION		0x01030400	//"01.03.0400"
+#define UFFS_VERSION		0x01030000	//"01.03.0000"
 
 const char * uffs_Version2Str(int ver);
 int uffs_GetVersion(void);
 int uffs_GetMainVersion(int ver);
 int uffs_GetMinorVersion(int ver);
-int uffs_GetTrivialVersion(int ver);
 
 #ifdef __cplusplus
 }
