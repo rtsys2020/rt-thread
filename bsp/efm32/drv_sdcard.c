@@ -2,9 +2,9 @@
  * @file    drv_sdcard.c
  * @brief   Memory card driver (SPI mode) of RT-Thread RTOS for using EFM32
  *  USART module
- *  COPYRIGHT (C) 2012, RT-Thread Development Team
+ *  COPYRIGHT (C) 2011, RT-Thread Development Team
  * @author  onelife
- * @version 1.0
+ * @version 0.4 beta
  *******************************************************************************
  * @section License
  * The license and distribution terms for this file may be found in the file

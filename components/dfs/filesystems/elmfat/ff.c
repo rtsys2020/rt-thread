@@ -523,13 +523,6 @@ void mem_cpy (void* dst, const void* src, UINT cnt) {
 	const BYTE *s = (const BYTE*)src;
 
 #if _WORD_ACCESS == 1
-	if (((unsigned)d & 0x03)!=0 || ((unsigned)s & 0x03)!=0)
-	{
-		while (cnt--)
-			*d++ = *s++;
-		return;
-	}
-    
 	while (cnt >= sizeof(int)) {
 		*(int*)d = *(int*)s;
 		d += sizeof(int); s += sizeof(int);
@@ -3040,20 +3033,8 @@ FRESULT f_seekdir(
 	int offset		/* the seek offset */
 )
 {
-	int i = 0;
-
-	if (dir_sdi(dj, 0) != FR_OK || offset < 0)
-		return FR_INT_ERR;
-
-	while(i < offset)
-	{
-		if(dir_read(dj) != FR_OK || dir_next(dj, 0) != FR_OK)
-			return FR_INT_ERR;
-		i++;
-	} 
-	return FR_OK;
+	return dir_sdi(dj, offset);				/* seek directory index to offset */
 }
-
 
 
 #if _FS_MINIMIZE == 0

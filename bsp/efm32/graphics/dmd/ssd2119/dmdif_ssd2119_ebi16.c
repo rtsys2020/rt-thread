@@ -1,23 +1,14 @@
- /*************************************************************************//**
- * @file dmdif_ssd2119_ebi.c
- * @brief Dot matrix display interface using EBI
- * @author Energy Micro AS
+/**
+ * @section LICENSE
  ******************************************************************************
- * @section License
- * <b>(C) Copyright 2012 Energy Micro AS, http://www.energymicro.com</b>
+ *           <b>(C) Copyright 2009 Energy Micro AS, www.energymicro.com</b>
  ******************************************************************************
  *
- * Permission is granted to anyone to use this software for any purpose,
- * including commercial applications, and to alter it and redistribute it
- * freely, subject to the following restrictions:
+ * This source code is the property of Energy Micro AS. The source/compiled
+ * code may not be used, redistributed or modified without a written consent
+ * from Energy Micro AS.
  *
- * 1. The origin of this software must not be misrepresented; you must not
- *    claim that you wrote the original software.
- * 2. Altered source versions must be plainly marked as such, and must not be
- *    misrepresented as being the original software.
- * 3. This notice may not be removed or altered from any source distribution.
- * 4. The source and compiled code may only be used on Energy Micro "EFM32"
- *    microcontrollers and "EFR4" radios.
+ * This copyright notice may not be removed from the source code nor changed.
  *
  * DISCLAIMER OF WARRANTY/LIMITATION OF REMEDIES: Energy Micro AS has no
  * obligation to support this Software. Energy Micro AS is providing the
@@ -30,7 +21,12 @@
  * special damages, or any other relief, or for any claim by any third party,
  * arising from your use of this Software.
  *
- *****************************************************************************/
+ ******************************************************************************
+ * @file dmdif_ssd2119_ebi.c
+ * @brief Dot matrix display interface using EBI
+ * @author Energy Micro AS
+ ******************************************************************************
+ */
 
 #include <stdint.h>
 #include "dmd_ssd2119_registers.h"
@@ -91,7 +87,7 @@ EMSTATUS DMDIF_writeReg(uint8_t reg, uint16_t data)
 /**************************************************************************//**
 *  @brief
 *  Reads the device code of the LCD controller
-*  DOESN'T WORK
+*  WORKING NOW
 *
 *  @return
 *  The device code of the LCD controller
@@ -202,7 +198,7 @@ EMSTATUS DMDIF_writeDataConverted( uint16_t a, uint16_t b ){
 *  @brief
 *  Reads a byte of data from the memory of the LCD controller.
 *  DMDIF_prepareDataAccess() needs to be called before using this function.
-*  DOESN'T WORK
+*  DWORKING NOW
 *
 *  @return
 *  18bpp value of pixel
@@ -215,6 +211,7 @@ uint32_t DMDIF_readData(void)
 
   return data;
 }
+
 
 /**************************************************************************//**
 *  \brief

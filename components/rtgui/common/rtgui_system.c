@@ -16,33 +16,24 @@
 #include <rtgui/image.h>
 #include <rtgui/font.h>
 #include <rtgui/event.h>
-#include <rtgui/rtgui_app.h>
 #include <rtgui/rtgui_server.h>
 #include <rtgui/rtgui_system.h>
 #include <rtgui/widgets/window.h>
 #include <rtgui/rtgui_theme.h>
 
+// #define RTGUI_EVENT_DEBUG
+
 #ifdef _WIN32
+#define RTGUI_EVENT_DEBUG
 #define RTGUI_MEM_TRACE
 #endif
 
-static rtgui_rect_t _mainwin_rect;
-static struct rt_mutex _screen_lock;
-
 void rtgui_system_server_init()
 {
-	rt_mutex_init(&_screen_lock, "screen", RT_IPC_FLAG_FIFO);
-
-	/* the graphic device driver must be set before initialization */
-	RT_ASSERT(rtgui_graphic_driver_get_default() != RT_NULL);
-
 	/* init image */
 	rtgui_system_image_init();
 	/* init font */
 	rtgui_font_system_init();
-
-	/* set the rect of main window to full screen */
-	rtgui_graphic_driver_get_rect(rtgui_graphic_driver_get_default(), &_mainwin_rect);
 
 	/* init rtgui server */
 	rtgui_topwin_init();
@@ -50,6 +41,467 @@ void rtgui_system_server_init()
 
 	/* init theme */
 	rtgui_system_theme_init();
+}
+
+/************************************************************************/
+/* RTGUI Thread Wrapper                                                 */
+/************************************************************************/
+#ifdef RTGUI_EVENT_DEBUG
+const char *event_string[] =
+{
+	/* panel event */
+	"PANEL_ATTACH",			/* attach to a panel	*/
+	"PANEL_DETACH",			/* detach from a panel	*/
+	"PANEL_SHOW",			/* show in a panel		*/
+	"PANEL_HIDE",			/* hide from a panel	*/
+	"PANEL_INFO",			/* panel information 	*/
+	"PANEL_RESIZE",			/* resize panel 		*/
+	"PANEL_FULLSCREEN",		/* to full screen 		*/
+	"PANEL_NORMAL",			/* to normal screen 	*/
+
+	/* window event */
+	"WIN_CREATE",			/* create a window 	*/
+	"WIN_DESTROY",			/* destroy a window 	*/
+	"WIN_SHOW",				/* show a window 		*/
+	"WIN_HIDE",				/* hide a window 		*/
+	"WIN_ACTIVATE", 		/* activate a window 	*/
+	"WIN_DEACTIVATE",		/* deactivate a window 	*/
+	"WIN_CLOSE",			/* close a window 		*/
+	"WIN_MOVE",				/* move a window 		*/
+	"WIN_RESIZE", 			/* resize a window 		*/
+
+	"SET_WM", 				/* set window manager	*/
+
+	"UPDATE_BEGIN",			/* begin of update rect */
+	"UPDATE_END",			/* end of update rect	*/
+	"MONITOR_ADD",			/* add a monitor rect 	*/
+	"MONITOR_REMOVE", 		/* remove a monitor rect*/
+	"PAINT",				/* paint on screen 		*/
+	"TIMER",				/* timer 				*/
+
+	/* clip rect information */
+	"CLIP_INFO",			/* clip rect info		*/
+
+	/* mouse and keyboard event */
+	"MOUSE_MOTION",			/* mouse motion */
+	"MOUSE_BUTTON",			/* mouse button info 	*/
+	"KBD",					/* keyboard info		*/
+
+	/* user command event */
+	"COMMAND",				/* user command 		*/
+
+	/* request's status event */
+	"STATUS",				/* request result 		*/
+	"SCROLLED",           	/* scroll bar scrolled  */
+	"RESIZE",				/* widget resize 		*/
+};
+
+#define DBG_MSG(x)	rt_kprintf x
+
+static void rtgui_event_dump(rt_thread_t tid, rtgui_event_t* event)
+{
+	char* sender = "(unknown)";
+
+	if (event->sender != RT_NULL) sender = event->sender->name;
+
+	if ((event->type == RTGUI_EVENT_TIMER) ||
+		(event->type == RTGUI_EVENT_UPDATE_BEGIN) ||
+		(event->type == RTGUI_EVENT_UPDATE_END))
+	{
+		/* don't dump timer event */
+		return ;
+	}
+
+	rt_kprintf("%s -- %s --> %s ", sender, event_string[event->type], tid->name);
+	switch (event->type)
+	{
+	case RTGUI_EVENT_PAINT:
+		{
+			struct rtgui_event_paint *paint = (struct rtgui_event_paint *)event;
+
+			if(paint->wid != RT_NULL)
+				rt_kprintf("win: %s", paint->wid->title);
+		}
+		break;
+
+	case RTGUI_EVENT_KBD:
+		{
+			struct rtgui_event_kbd *ekbd = (struct rtgui_event_kbd*) event;
+			if (ekbd->wid != RT_NULL)
+				rt_kprintf("win: %s", ekbd->wid->title);
+			if (RTGUI_KBD_IS_UP(ekbd)) rt_kprintf(", up");
+			else rt_kprintf(", down");
+		}
+		break;
+
+	case RTGUI_EVENT_CLIP_INFO:
+		{
+			struct rtgui_event_clip_info *info = (struct rtgui_event_clip_info *)event;
+
+			if(info->wid != RT_NULL)
+				rt_kprintf("win: %s", info->wid->title);
+		}
+		break;
+
+	case RTGUI_EVENT_WIN_CREATE:
+		{
+			struct rtgui_event_win_create *create = (struct rtgui_event_win_create*)event;
+
+			rt_kprintf(" win: %s at (x1:%d, y1:%d, x2:%d, y2:%d)",
+#ifdef RTGUI_USING_SMALL_SIZE
+				create->wid->title,
+				RTGUI_WIDGET(create->wid)->extent.x1,
+				RTGUI_WIDGET(create->wid)->extent.y1,
+				RTGUI_WIDGET(create->wid)->extent.x2,
+				RTGUI_WIDGET(create->wid)->extent.y2);
+#else
+				create->title,
+				create->extent.x1,
+				create->extent.y1,
+				create->extent.x2,
+				create->extent.y2);
+#endif
+		}
+		break;
+
+	case RTGUI_EVENT_UPDATE_END:
+		{
+			struct rtgui_event_update_end* update_end = (struct rtgui_event_update_end*)event;
+			rt_kprintf("(x:%d, y1:%d, x2:%d, y2:%d)", update_end->rect.x1,
+				update_end->rect.y1,
+				update_end->rect.x2,
+				update_end->rect.y2);
+		}
+		break;
+
+	case RTGUI_EVENT_WIN_ACTIVATE:
+	case RTGUI_EVENT_WIN_DEACTIVATE:
+	case RTGUI_EVENT_WIN_SHOW:
+		{
+			struct rtgui_event_win *win = (struct rtgui_event_win *)event;
+
+			if(win->wid != RT_NULL)
+				rt_kprintf("win: %s", win->wid->title);
+		}
+		break;
+
+	case RTGUI_EVENT_WIN_MOVE:
+		{
+			struct rtgui_event_win_move *win = (struct rtgui_event_win_move *)event;
+
+			if(win->wid != RT_NULL)
+			{
+				rt_kprintf("win: %s", win->wid->title);
+				rt_kprintf(" to (x:%d, y:%d)", win->x, win->y);
+			}
+		}
+		break;
+
+	case RTGUI_EVENT_WIN_RESIZE:
+		{
+			struct rtgui_event_win_resize* win = (struct rtgui_event_win_resize *)event;
+
+			if (win->wid != RT_NULL)
+			{
+				rt_kprintf("win: %s, rect(x1:%d, y1:%d, x2:%d, y2:%d)", win->wid->title,
+					RTGUI_WIDGET(win->wid)->extent.x1,
+					RTGUI_WIDGET(win->wid)->extent.y1,
+					RTGUI_WIDGET(win->wid)->extent.x2,
+					RTGUI_WIDGET(win->wid)->extent.y2);
+			}
+		}
+		break;
+
+	case RTGUI_EVENT_MOUSE_BUTTON:
+	case RTGUI_EVENT_MOUSE_MOTION:
+		{
+			struct rtgui_event_mouse *mouse = (struct rtgui_event_mouse*)event;
+
+			if (mouse->button & RTGUI_MOUSE_BUTTON_LEFT) rt_kprintf("left ");
+			else rt_kprintf("right ");
+
+			if (mouse->button & RTGUI_MOUSE_BUTTON_DOWN) rt_kprintf("down ");
+			else rt_kprintf("up ");
+
+			if (mouse->wid != RT_NULL)
+				rt_kprintf("win: %s at (%d, %d)", mouse->wid->title,
+				mouse->x, mouse->y);
+			else
+				rt_kprintf("(%d, %d)", mouse->x, mouse->y);
+		}
+		break;
+
+	case RTGUI_EVENT_MONITOR_ADD:
+		{
+			struct rtgui_event_monitor *monitor = (struct rtgui_event_monitor*)event;
+			if (monitor->panel != RT_NULL)
+			{
+				rt_kprintf("the rect is:(%d, %d) - (%d, %d)",
+					monitor->rect.x1, monitor->rect.y1,
+					monitor->rect.x2, monitor->rect.y2);
+			}
+			else if (monitor->wid != RT_NULL)
+			{
+				rt_kprintf("win: %s, the rect is:(%d, %d) - (%d, %d)", monitor->wid->title,
+					monitor->rect.x1, monitor->rect.y1,
+					monitor->rect.x2, monitor->rect.y2);
+			}
+		}
+		break;
+	}
+
+	rt_kprintf("\n");
+}
+#else
+#define DBG_MSG(x)
+#define rtgui_event_dump(tid, event)
+#endif
+
+rtgui_thread_t* rtgui_thread_register(rt_thread_t tid, rt_mq_t mq)
+{
+	rtgui_thread_t* thread = rtgui_malloc(sizeof(rtgui_thread_t));
+
+	if (thread != RT_NULL)
+	{
+		DBG_MSG(("register a rtgui thread: %s, tid: 0x%p\n", tid->name, tid));
+
+		/* set tid and mq */
+		thread->tid			= tid;
+		thread->mq			= mq;
+		thread->widget		= RT_NULL;
+		thread->on_idle     = RT_NULL;
+
+		/* set user thread */
+		tid->user_data = (rt_uint32_t)thread;
+	}
+
+	return thread;
+}
+
+void rtgui_thread_deregister(rt_thread_t tid)
+{
+	rtgui_thread_t* thread;
+
+	/* find rtgui_thread_t */
+	thread = (rtgui_thread_t*) (tid->user_data);
+
+	if (thread != RT_NULL)
+	{
+		/* remove rtgui_thread_t */
+		tid->user_data = 0;
+
+		/* free rtgui_thread_t */
+		rtgui_free(thread);
+	}
+}
+
+/* get current gui thread */
+rtgui_thread_t* rtgui_thread_self()
+{
+	rtgui_thread_t* thread;
+	rt_thread_t self;
+
+	/* get current thread */
+	self = rt_thread_self();
+	thread = (rtgui_thread_t*)(self->user_data);
+
+	return thread;
+}
+
+void rtgui_thread_set_onidle(rtgui_idle_func onidle)
+{
+	rtgui_thread_t* thread;
+
+	thread = rtgui_thread_self();
+	RT_ASSERT(thread != RT_NULL);
+
+	thread->on_idle = onidle;
+}
+
+rtgui_idle_func rtgui_thread_get_onidle()
+{
+	rtgui_thread_t* thread;
+
+	thread = rtgui_thread_self();
+	RT_ASSERT(thread != RT_NULL);
+
+	return thread->on_idle;
+}
+
+extern rt_thread_t rt_thread_find(char* name);
+rt_thread_t rtgui_thread_get_server()
+{
+	return rt_thread_find("rtgui");
+}
+
+void rtgui_thread_set_widget(rtgui_widget_t* widget)
+{
+	rtgui_thread_t* thread;
+
+	/* get rtgui_thread */
+	thread = (rtgui_thread_t*) (rt_thread_self()->user_data);
+
+	if (thread != RT_NULL) thread->widget = widget;
+}
+
+rtgui_widget_t* rtgui_thread_get_widget()
+{
+	rtgui_thread_t* thread;
+
+	/* get rtgui_thread_t */
+	thread = (rtgui_thread_t*) (rt_thread_self()->user_data);
+
+	return thread == RT_NULL? RT_NULL : thread->widget;
+}
+
+rt_err_t rtgui_thread_send(rt_thread_t tid, rtgui_event_t* event, rt_size_t event_size)
+{
+	rt_err_t result;
+	rtgui_thread_t* thread;
+
+	rtgui_event_dump(tid, event);
+
+	/* find rtgui_thread_t */
+	thread = (rtgui_thread_t*) (tid->user_data);
+	if (thread == RT_NULL) return -RT_ERROR;
+
+	result = rt_mq_send(thread->mq, event, event_size);
+	if (result != RT_EOK)
+	{
+		if (event->type != RTGUI_EVENT_TIMER)
+			rt_kprintf("send event to %s failed\n", thread->tid->name);
+	}
+
+	return result;
+}
+
+rt_err_t rtgui_thread_send_urgent(rt_thread_t tid, rtgui_event_t* event, rt_size_t event_size)
+{
+	rt_err_t result;
+	rtgui_thread_t* thread;
+
+	rtgui_event_dump(tid, event);
+
+	/* find rtgui_thread_t */
+	thread = (rtgui_thread_t*) (tid->user_data);
+	if (thread == RT_NULL) return -RT_ERROR;
+
+	result = rt_mq_urgent(thread->mq, event, event_size);
+	if (result != RT_EOK)
+		rt_kprintf("send ergent event failed\n");
+
+	return result;
+}
+
+rt_err_t rtgui_thread_send_sync(rt_thread_t tid, rtgui_event_t* event, rt_size_t event_size)
+{
+	rt_err_t r;
+	rtgui_thread_t* thread;
+	rt_int32_t ack_buffer, ack_status;
+	struct rt_mailbox ack_mb;
+
+	rtgui_event_dump(tid, event);
+
+	/* init ack mailbox */
+	r = rt_mb_init(&ack_mb, "ack", &ack_buffer, 1, 0);
+	if (r!= RT_EOK) goto __return;
+
+	/* find rtgui_thread_t */
+	thread = (rtgui_thread_t*) (tid->user_data);
+	if (thread == RT_NULL)
+	{
+		r = -RT_ERROR;
+		goto __return;
+	}
+
+	event->ack = &ack_mb;
+	r = rt_mq_send(thread->mq, event, event_size);
+	if (r != RT_EOK)
+	{
+		rt_kprintf("send sync event failed\n");
+		goto __return;
+	}
+
+	r = rt_mb_recv(&ack_mb, (rt_uint32_t*)&ack_status, RT_WAITING_FOREVER);
+	if (r!= RT_EOK) goto __return;
+
+	if (ack_status != RTGUI_STATUS_OK)
+		r = -RT_ERROR;
+	else
+		r = RT_EOK;
+
+__return:
+	/* fini ack mailbox */
+	rt_mb_detach(&ack_mb);
+
+	return r;
+}
+
+rt_err_t rtgui_thread_ack(rtgui_event_t* event, rt_int32_t status)
+{
+	if (event != RT_NULL &&
+		event->ack != RT_NULL)
+	{
+		rt_mb_send(event->ack, status);
+	}
+
+	return RT_EOK;
+}
+
+rt_err_t rtgui_thread_recv(rtgui_event_t* event, rt_size_t event_size)
+{
+	rtgui_thread_t* thread;
+	rt_err_t r;
+
+	/* find rtgui_thread_t */
+	thread = (rtgui_thread_t*) (rt_thread_self()->user_data);
+	if (thread == RT_NULL) return -RT_ERROR;
+
+	r = rt_mq_recv(thread->mq, event, event_size, RT_WAITING_FOREVER);
+
+	return r;
+}
+
+rt_err_t rtgui_thread_recv_nosuspend(rtgui_event_t* event, rt_size_t event_size)
+{
+	rtgui_thread_t* thread;
+	rt_err_t r;
+
+	/* find rtgui_thread */
+	thread = (rtgui_thread_t*) (rt_thread_self()->user_data);
+	if (thread == RT_NULL) return -RT_ERROR;
+
+	r = rt_mq_recv(thread->mq, event, event_size, 0);
+
+	return r;
+}
+
+rt_err_t rtgui_thread_recv_filter(rt_uint32_t type, rtgui_event_t* event, rt_size_t event_size)
+{
+	rtgui_thread_t* thread;
+
+	/* find rtgui_thread_t */
+	thread = (rtgui_thread_t*) (rt_thread_self()->user_data);
+	if (thread == RT_NULL) return -RT_ERROR;
+
+	while (rt_mq_recv(thread->mq, event, event_size, RT_WAITING_FOREVER) == RT_EOK)
+	{
+		if (event->type == type)
+		{
+			return RT_EOK;
+		}
+		else
+		{
+			/* let widget to handle event */
+			if (thread->widget != RT_NULL &&
+				thread->widget->event_handler != RT_NULL)
+			{
+				thread->widget->event_handler(thread->widget, event);
+			}
+		}
+	}
+
+	return -RT_ERROR;
 }
 
 /************************************************************************/
@@ -70,7 +522,7 @@ static void rtgui_time_out(void* parameter)
 
 	event.timer = timer;
 
-	rtgui_send(timer->tid, &(event.parent), sizeof(rtgui_event_timer_t));
+	rtgui_thread_send(timer->tid, &(event.parent), sizeof(rtgui_event_timer_t));
 }
 
 rtgui_timer_t* rtgui_timer_create(rt_int32_t time, rt_int32_t flag, rtgui_timeout_func timeout, void* parameter)
@@ -87,7 +539,6 @@ rtgui_timer_t* rtgui_timer_create(rt_int32_t time, rt_int32_t flag, rtgui_timeou
 
 	return timer;
 }
-RTM_EXPORT(rtgui_timer_create);
 
 void rtgui_timer_destory(rtgui_timer_t* timer)
 {
@@ -101,7 +552,6 @@ void rtgui_timer_destory(rtgui_timer_t* timer)
 
 	rtgui_free(timer);
 }
-RTM_EXPORT(rtgui_timer_destory);
 
 void rtgui_timer_start(rtgui_timer_t* timer)
 {
@@ -110,7 +560,6 @@ void rtgui_timer_start(rtgui_timer_t* timer)
 	/* start rt-thread timer */
 	rt_timer_start(&(timer->timer));
 }
-RTM_EXPORT(rtgui_timer_start);
 
 void rtgui_timer_stop (rtgui_timer_t* timer)
 {
@@ -119,7 +568,6 @@ void rtgui_timer_stop (rtgui_timer_t* timer)
 	/* stop rt-thread timer */
 	rt_timer_stop(&(timer->timer));
 }
-RTM_EXPORT(rtgui_timer_stop);
 
 /************************************************************************/
 /* RTGUI Memory Management                                              */
@@ -271,7 +719,6 @@ void* rtgui_malloc(rt_size_t size)
 
 	return ptr;
 }
-RTM_EXPORT(rtgui_malloc);
 
 void* rtgui_realloc(void* ptr, rt_size_t size)
 {
@@ -290,7 +737,6 @@ void* rtgui_realloc(void* ptr, rt_size_t size)
 
 	return new_ptr;
 }
-RTM_EXPORT(rtgui_realloc);
 
 void rtgui_free(void* ptr)
 {
@@ -301,457 +747,4 @@ void rtgui_free(void* ptr)
 
 	rt_free(ptr);
 }
-RTM_EXPORT(rtgui_free);
-
-#if defined(RTGUI_MEM_TRACE) && defined(RT_USING_FINSH)
-#include <finsh.h>
-void list_guimem(void)
-{
-	rt_kprintf("Current Used: %d, Maximal Used: %d\n", mem_info.allocated_size, mem_info.max_allocated);
-}
-FINSH_FUNCTION_EXPORT(list_guimem, display memory information);
-#endif
-
-/************************************************************************/
-/* RTGUI Event Dump                                                     */
-/************************************************************************/
-
-#ifdef _WIN32
-#define RTGUI_EVENT_DEBUG
-#endif
-
-#ifdef RTGUI_EVENT_DEBUG
-const char *event_string[] =
-{
-	/* application event */
-	"APP_CREATE", 			/* create an application */
-	"APP_DESTROY", 			/* destroy an application */
-	"APP_ACTIVATE",			/* activate an application */
-
-	/* window event */
-	"WIN_CREATE",			/* create a window 	*/
-	"WIN_DESTROY",			/* destroy a window 	*/
-	"WIN_SHOW",				/* show a window 		*/
-	"WIN_HIDE",				/* hide a window 		*/
-	"WIN_ACTIVATE", 		/* activate a window 	*/
-	"WIN_DEACTIVATE",		/* deactivate a window 	*/
-	"WIN_CLOSE",			/* close a window 		*/
-	"WIN_MOVE",				/* move a window 		*/
-	"WIN_RESIZE", 			/* resize a window 		*/
-	"WIN_MODAL_ENTER", 			/* a window modals		*/
-
-	"SET_WM", 				/* set window manager	*/
-
-	"UPDATE_BEGIN",			/* begin of update rect */
-	"UPDATE_END",			/* end of update rect	*/
-	"MONITOR_ADD",			/* add a monitor rect 	*/
-	"MONITOR_REMOVE", 		/* remove a monitor rect*/
-	"SHOW",				    /* the widget is going to be shown */
-	"HIDE",				    /* the widget is going to be hidden */
-	"PAINT",				/* paint on screen 		*/
-	"TIMER",				/* timer 				*/
-	"UPDATE_TOPLVL",		/* update toplevel      */
-
-	/* clip rect information */
-	"CLIP_INFO",			/* clip rect info		*/
-
-	/* mouse and keyboard event */
-	"MOUSE_MOTION",			/* mouse motion */
-	"MOUSE_BUTTON",			/* mouse button info 	*/
-	"KBD",					/* keyboard info		*/
-
-	/* user command event */
-	"COMMAND",				/* user command 		*/
-
-	/* request's status event */
-	"STATUS",				/* request result 		*/
-	"SCROLLED",           	/* scroll bar scrolled  */
-	"RESIZE",				/* widget resize 		*/
-};
-
-#define DBG_MSG(x)	rt_kprintf x
-
-static void rtgui_event_dump(rt_thread_t tid, rtgui_event_t* event)
-{
-	char* sender = "(unknown)";
-
-	if ((event->type == RTGUI_EVENT_TIMER) ||
-		(event->type == RTGUI_EVENT_UPDATE_BEGIN) ||
-		(event->type == RTGUI_EVENT_MOUSE_MOTION) ||
-		(event->type == RTGUI_EVENT_UPDATE_END))
-	{
-		/* don't dump timer event */
-		return ;
-	}
-
-	if (event->sender != RT_NULL)
-		sender = event->sender->name;
-
-	rt_kprintf("%s -- %s --> %s ", sender, event_string[event->type], tid->name);
-	switch (event->type)
-	{
-	case RTGUI_EVENT_APP_CREATE:
-	case RTGUI_EVENT_APP_DESTROY:
-	case RTGUI_EVENT_APP_ACTIVATE:
-		{
-			struct rtgui_event_application *eapp = (struct rtgui_event_application *)event;
-
-			rt_kprintf("app: %s", eapp->app->name);
-		}
-		break;
-		
-	case RTGUI_EVENT_PAINT:
-		{
-			struct rtgui_event_paint *paint = (struct rtgui_event_paint *)event;
-
-			if(paint->wid != RT_NULL)
-				rt_kprintf("win: %s", paint->wid->title);
-		}
-		break;
-
-	case RTGUI_EVENT_KBD:
-		{
-			struct rtgui_event_kbd *ekbd = (struct rtgui_event_kbd*) event;
-			if (ekbd->wid != RT_NULL)
-				rt_kprintf("win: %s", ekbd->wid->title);
-			if (RTGUI_KBD_IS_UP(ekbd)) rt_kprintf(", up");
-			else rt_kprintf(", down");
-		}
-		break;
-
-	case RTGUI_EVENT_CLIP_INFO:
-		{
-			struct rtgui_event_clip_info *info = (struct rtgui_event_clip_info *)event;
-
-			if(info->wid != RT_NULL)
-				rt_kprintf("win: %s", info->wid->title);
-		}
-		break;
-
-	case RTGUI_EVENT_WIN_CREATE:
-		{
-			struct rtgui_event_win_create *create = (struct rtgui_event_win_create*)event;
-
-			rt_kprintf(" win: %s at (x1:%d, y1:%d, x2:%d, y2:%d), addr: %p",
-#ifdef RTGUI_USING_SMALL_SIZE
-				create->wid->title,
-				RTGUI_WIDGET(create->wid)->extent.x1,
-				RTGUI_WIDGET(create->wid)->extent.y1,
-				RTGUI_WIDGET(create->wid)->extent.x2,
-				RTGUI_WIDGET(create->wid)->extent.y2,
-#else
-				create->title,
-				create->extent.x1,
-				create->extent.y1,
-				create->extent.x2,
-				create->extent.y2,
-#endif
-				create->wid
-                );
-		}
-		break;
-
-	case RTGUI_EVENT_UPDATE_END:
-		{
-			struct rtgui_event_update_end* update_end = (struct rtgui_event_update_end*)event;
-			rt_kprintf("(x:%d, y1:%d, x2:%d, y2:%d)", update_end->rect.x1,
-				update_end->rect.y1,
-				update_end->rect.x2,
-				update_end->rect.y2);
-		}
-		break;
-
-	case RTGUI_EVENT_WIN_ACTIVATE:
-	case RTGUI_EVENT_WIN_DEACTIVATE:
-	case RTGUI_EVENT_WIN_SHOW:
-	case RTGUI_EVENT_WIN_MODAL_ENTER:
-		{
-			struct rtgui_event_win *win = (struct rtgui_event_win *)event;
-
-			if(win->wid != RT_NULL)
-				rt_kprintf("win: %s", win->wid->title);
-		}
-		break;
-
-	case RTGUI_EVENT_WIN_MOVE:
-		{
-			struct rtgui_event_win_move *win = (struct rtgui_event_win_move *)event;
-
-			if(win->wid != RT_NULL)
-			{
-				rt_kprintf("win: %s", win->wid->title);
-				rt_kprintf(" to (x:%d, y:%d)", win->x, win->y);
-			}
-		}
-		break;
-
-	case RTGUI_EVENT_WIN_RESIZE:
-		{
-			struct rtgui_event_win_resize* win = (struct rtgui_event_win_resize *)event;
-
-			if (win->wid != RT_NULL)
-			{
-				rt_kprintf("win: %s, rect(x1:%d, y1:%d, x2:%d, y2:%d)", win->wid->title,
-					RTGUI_WIDGET(win->wid)->extent.x1,
-					RTGUI_WIDGET(win->wid)->extent.y1,
-					RTGUI_WIDGET(win->wid)->extent.x2,
-					RTGUI_WIDGET(win->wid)->extent.y2);
-			}
-		}
-		break;
-
-	case RTGUI_EVENT_MOUSE_BUTTON:
-	case RTGUI_EVENT_MOUSE_MOTION:
-		{
-			struct rtgui_event_mouse *mouse = (struct rtgui_event_mouse*)event;
-
-			if (mouse->button & RTGUI_MOUSE_BUTTON_LEFT) rt_kprintf("left ");
-			else rt_kprintf("right ");
-
-			if (mouse->button & RTGUI_MOUSE_BUTTON_DOWN) rt_kprintf("down ");
-			else rt_kprintf("up ");
-
-			if (mouse->wid != RT_NULL)
-				rt_kprintf("win: %s at (%d, %d)", mouse->wid->title,
-				mouse->x, mouse->y);
-			else
-				rt_kprintf("(%d, %d)", mouse->x, mouse->y);
-		}
-		break;
-
-	case RTGUI_EVENT_MONITOR_ADD:
-		{
-			struct rtgui_event_monitor *monitor = (struct rtgui_event_monitor*)event;
-			if (monitor->wid != RT_NULL)
-			{
-				rt_kprintf("win: %s, the rect is:(%d, %d) - (%d, %d)", monitor->wid->title,
-					monitor->rect.x1, monitor->rect.y1,
-					monitor->rect.x2, monitor->rect.y2);
-			}
-		}
-		break;
-	}
-
-	rt_kprintf("\n");
-}
-#else
-#define DBG_MSG(x)
-#define rtgui_event_dump(tid, event)
-#endif
-
-/************************************************************************/
-/* RTGUI IPC APIs                                                       */
-/************************************************************************/
-rt_err_t rtgui_send(rt_thread_t tid, rtgui_event_t* event, rt_size_t event_size)
-{
-	rt_err_t result;
-	struct rtgui_app *app;
-
-	RT_ASSERT(tid != RT_NULL);
-	RT_ASSERT(event != RT_NULL);
-	RT_ASSERT(event_size != 0);
-
-	rtgui_event_dump(tid, event);
-
-	/* find struct rtgui_application */
-	app = (struct rtgui_app*) (tid->user_data);
-	if (app == RT_NULL)
-		return -RT_ERROR;
-
-	result = rt_mq_send(app->mq, event, event_size);
-	if (result != RT_EOK)
-	{
-		if (event->type != RTGUI_EVENT_TIMER)
-			rt_kprintf("send event to %s failed\n", app->tid->name);
-	}
-
-	return result;
-}
-RTM_EXPORT(rtgui_send);
-
-rt_err_t rtgui_send_urgent(rt_thread_t tid, rtgui_event_t* event, rt_size_t event_size)
-{
-	rt_err_t result;
-	struct rtgui_app *app;
-
-	RT_ASSERT(tid != RT_NULL);
-	RT_ASSERT(event != RT_NULL);
-	RT_ASSERT(event_size != 0);
-
-	rtgui_event_dump(tid, event);
-
-	/* find rtgui_application */
-	app = (struct rtgui_app*) (tid->user_data);
-	if (app == RT_NULL)
-		return -RT_ERROR;
-
-	result = rt_mq_urgent(app->mq, event, event_size);
-	if (result != RT_EOK)
-		rt_kprintf("send ergent event failed\n");
-
-	return result;
-}
-RTM_EXPORT(rtgui_send_urgent);
-
-rt_err_t rtgui_send_sync(rt_thread_t tid, rtgui_event_t* event, rt_size_t event_size)
-{
-	rt_err_t r;
-	struct rtgui_app *app;
-	rt_int32_t ack_buffer, ack_status;
-	struct rt_mailbox ack_mb;
-
-	RT_ASSERT(tid != RT_NULL);
-	RT_ASSERT(event != RT_NULL);
-	RT_ASSERT(event_size != 0);
-
-	rtgui_event_dump(tid, event);
-
-	/* init ack mailbox */
-	r = rt_mb_init(&ack_mb, "ack", &ack_buffer, 1, 0);
-	if (r!= RT_EOK)
-		goto __return;
-
-	app = (struct rtgui_app*) (tid->user_data);
-	if (app == RT_NULL)
-	{
-		r = -RT_ERROR;
-		goto __return;
-	}
-
-	event->ack = &ack_mb;
-	r = rt_mq_send(app->mq, event, event_size);
-	if (r != RT_EOK)
-	{
-		rt_kprintf("send sync event failed\n");
-		goto __return;
-	}
-
-	r = rt_mb_recv(&ack_mb, (rt_uint32_t*)&ack_status, RT_WAITING_FOREVER);
-	if (r!= RT_EOK)
-		goto __return;
-
-	if (ack_status != RTGUI_STATUS_OK)
-		r = -RT_ERROR;
-	else
-		r = RT_EOK;
-
-__return:
-	/* fini ack mailbox */
-	rt_mb_detach(&ack_mb);
-	return r;
-}
-RTM_EXPORT(rtgui_send_sync);
-
-rt_err_t rtgui_ack(rtgui_event_t* event, rt_int32_t status)
-{
-	RT_ASSERT(event != RT_NULL);
-	RT_ASSERT(event->ack != RT_NULL);
-
-	rt_mb_send(event->ack, status);
-
-	return RT_EOK;
-}
-RTM_EXPORT(rtgui_ack);
-
-rt_err_t rtgui_recv(rtgui_event_t* event, rt_size_t event_size)
-{
-	struct rtgui_app* app;
-	rt_err_t r;
-
-	RT_ASSERT(event != RT_NULL);
-	RT_ASSERT(event_size != 0);
-
-	app = (struct rtgui_app*) (rt_thread_self()->user_data);
-	if (app == RT_NULL)
-		return -RT_ERROR;
-
-	r = rt_mq_recv(app->mq, event, event_size, RT_WAITING_FOREVER);
-
-	return r;
-}
-RTM_EXPORT(rtgui_recv);
-
-rt_err_t rtgui_recv_nosuspend(rtgui_event_t* event, rt_size_t event_size)
-{
-	struct rtgui_app *app;
-	rt_err_t r;
-
-	RT_ASSERT(event != RT_NULL);
-	RT_ASSERT(event != 0);
-
-	app = (struct rtgui_app*) (rt_thread_self()->user_data);
-	if (app == RT_NULL)
-		return -RT_ERROR;
-
-	r = rt_mq_recv(app->mq, event, event_size, 0);
-
-	return r;
-}
-RTM_EXPORT(rtgui_recv_nosuspend);
-
-rt_err_t rtgui_recv_filter(rt_uint32_t type, rtgui_event_t* event, rt_size_t event_size)
-{
-	struct rtgui_app *app;
-
-	RT_ASSERT(event != RT_NULL);
-	RT_ASSERT(event_size != 0);
-
-	app = (struct rtgui_app*) (rt_thread_self()->user_data);
-	if (app == RT_NULL)
-		return -RT_ERROR;
-
-	while (rt_mq_recv(app->mq, event, event_size, RT_WAITING_FOREVER) == RT_EOK)
-	{
-		if (event->type == type)
-		{
-			return RT_EOK;
-		}
-		else
-		{
-			if (RTGUI_OBJECT(app)->event_handler != RT_NULL)
-			{
-				RTGUI_OBJECT(app)->event_handler(RTGUI_OBJECT(app), event);
-			}
-		}
-	}
-
-	return -RT_ERROR;
-}
-RTM_EXPORT(rtgui_recv_filter);
-
-rt_thread_t rtgui_get_server(void)
-{
-	return rt_thread_find("rtgui");
-}
-RTM_EXPORT(rtgui_get_server);
-
-void rtgui_set_mainwin_rect(struct rtgui_rect *rect)
-{
-	_mainwin_rect = *rect;
-}
-RTM_EXPORT(rtgui_set_mainwin_rect);
-
-void rtgui_get_mainwin_rect(struct rtgui_rect *rect)
-{
-	*rect = _mainwin_rect;
-}
-RTM_EXPORT(rtgui_get_mainwin_rect);
-
-void rtgui_get_screen_rect(struct rtgui_rect *rect)
-{
-	rtgui_graphic_driver_get_rect(rtgui_graphic_driver_get_default(), rect);
-}
-RTM_EXPORT(rtgui_get_screen_rect);
-
-void rtgui_screen_lock(rt_int32_t timeout)
-{
-	rt_mutex_take(&_screen_lock, timeout);
-}
-RTM_EXPORT(rtgui_screen_lock);
-
-void rtgui_screen_unlock(void)
-{
-	rt_mutex_release(&_screen_lock);
-}
-RTM_EXPORT(rtgui_screen_unlock);
 

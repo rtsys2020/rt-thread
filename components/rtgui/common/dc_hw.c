@@ -15,14 +15,10 @@
 #include <rtgui/dc_hw.h>
 #include <rtgui/driver.h>
 #include <rtgui/rtgui_system.h>
-#include <rtgui/rtgui_app.h>
-#include <rtgui/rtgui_server.h>
-
-#include <rtgui/widgets/container.h>
+#include <rtgui/widgets/view.h>
 #include <rtgui/widgets/window.h>
+#include <rtgui/widgets/workbench.h>
 #include <rtgui/widgets/title.h>
-
-#define _int_swap(x, y)			do {x ^= y; y ^= x; x ^= y;} while (0)
 
 static void rtgui_dc_hw_draw_point(struct rtgui_dc* dc, int x, int y);
 static void rtgui_dc_hw_draw_color_point(struct rtgui_dc* dc, int x, int y, rtgui_color_t color);
@@ -73,7 +69,7 @@ struct rtgui_dc* rtgui_dc_hw_create(rtgui_widget_t* owner)
 
 	/* adjudge owner */
 	if (owner == RT_NULL || owner->toplevel == RT_NULL) return RT_NULL;
-	if (!RTGUI_IS_WIN(owner->toplevel)) return RT_NULL;
+	if (!RTGUI_IS_TOPLEVEL(owner->toplevel)) return RT_NULL;
 
 	/* set init visible as true */
 	RTGUI_WIDGET_DC_SET_VISIBLE(owner);
@@ -85,7 +81,7 @@ struct rtgui_dc* rtgui_dc_hw_create(rtgui_widget_t* owner)
 		if (RTGUI_WIDGET_IS_HIDE(widget))
 		{
 			RTGUI_WIDGET_DC_SET_UNVISIBLE(owner);
-			return RT_NULL;
+			break;
 		}
 
 		widget = widget->parent;
@@ -102,13 +98,13 @@ struct rtgui_dc* rtgui_dc_hw_create(rtgui_widget_t* owner)
 
 	if (RTGUI_IS_WINTITLE(owner->toplevel))
 	{
-		struct rtgui_win* top = RTGUI_WIN(owner->toplevel);
+		rtgui_toplevel_t* top = RTGUI_TOPLEVEL(owner->toplevel);
 		top->drawing ++;
 
 		if (top->drawing == 1)
 		{
 #ifdef RTGUI_USING_MOUSE_CURSOR
-#ifdef _WIN32
+#ifdef __WIN32__
 			rt_mutex_take(&cursor_mutex, RT_WAITING_FOREVER);
 			rt_kprintf("hide cursor\n");
 			rtgui_mouse_hide_cursor();
@@ -119,15 +115,15 @@ struct rtgui_dc* rtgui_dc_hw_create(rtgui_widget_t* owner)
 #endif
 		}
 	}
-	else if (RTGUI_IS_APP(owner->toplevel) ||
+	else if (RTGUI_IS_WORKBENCH(owner->toplevel) ||
 		RTGUI_IS_WIN(owner->toplevel))
 	{
-		struct rtgui_win* top = RTGUI_WIN(owner->toplevel);
+		rtgui_toplevel_t* top = RTGUI_TOPLEVEL(owner->toplevel);
 		top->drawing ++;
 
 		if (top->drawing == 1)
 		{
-#ifdef _WIN32
+#ifdef __WIN32__
 #ifdef RTGUI_USING_MOUSE_CURSOR
 			rt_mutex_take(&cursor_mutex, RT_WAITING_FOREVER);
 			rt_kprintf("hide cursor\n");
@@ -139,7 +135,7 @@ struct rtgui_dc* rtgui_dc_hw_create(rtgui_widget_t* owner)
 			RTGUI_EVENT_UPDATE_BEGIN_INIT(&(eupdate));
 			eupdate.rect = RTGUI_WIDGET(top)->extent;
 
-			rtgui_server_post_event((struct rtgui_event*)&eupdate, sizeof(eupdate));
+			rtgui_thread_send(top->server, (struct rtgui_event*)&eupdate, sizeof(eupdate));
 #endif
 		}
 	}
@@ -161,12 +157,12 @@ static rt_bool_t rtgui_dc_hw_fini(struct rtgui_dc* dc)
 	if (RTGUI_IS_WINTITLE(owner->toplevel))
 	{
 		/* update title extent */
-		struct rtgui_win* top = RTGUI_WIN(owner->toplevel);
+		rtgui_toplevel_t* top = RTGUI_TOPLEVEL(owner->toplevel);
 
 		top->drawing --;
 		if ((top->drawing == 0) && RTGUI_WIDGET_IS_DC_VISIBLE(owner))
 		{
-#ifdef _WIN32
+#ifdef __WIN32__
 #ifdef RTGUI_USING_MOUSE_CURSOR
 			rt_mutex_release(&cursor_mutex);
 			/* show cursor */
@@ -186,15 +182,15 @@ static rt_bool_t rtgui_dc_hw_fini(struct rtgui_dc* dc)
 #endif
 		}
 	}
-	else if (RTGUI_IS_APP(owner->toplevel) ||
+	else if (RTGUI_IS_WORKBENCH(owner->toplevel) ||
 		RTGUI_IS_WIN(owner->toplevel))
 	{
-		struct rtgui_win* top = RTGUI_WIN(owner->toplevel);
+		rtgui_toplevel_t* top = RTGUI_TOPLEVEL(owner->toplevel);
 		top->drawing --;
 
 		if ((top->drawing == 0) && RTGUI_WIDGET_IS_DC_VISIBLE(owner))
 		{
-#ifdef _WIN32
+#ifdef __WIN32__
 #ifdef RTGUI_USING_MOUSE_CURSOR
 			rt_mutex_release(&cursor_mutex);
 			/* show cursor */
@@ -209,7 +205,7 @@ static rt_bool_t rtgui_dc_hw_fini(struct rtgui_dc* dc)
 			RTGUI_EVENT_UPDATE_END_INIT(&(eupdate));
 			eupdate.rect = owner->extent;
 
-			rtgui_server_post_event((struct rtgui_event*)&eupdate, sizeof(eupdate));
+			rtgui_thread_send(top->server, (struct rtgui_event*)&eupdate, sizeof(eupdate));
 #endif
 		}
 	}
@@ -269,7 +265,6 @@ static void rtgui_dc_hw_draw_vline(struct rtgui_dc* self, int x, int y1, int y2)
 	x = x + dc->owner->extent.x1;
 	y1 = y1 + dc->owner->extent.y1;
 	y2 = y2 + dc->owner->extent.y1;
-	if (y1 > y2) _int_swap(y1, y2);
 
 	/* draw vline */
 	dc->hw_driver->ops->draw_vline(&(dc->owner->gc.foreground), x, y1, y2);
@@ -288,7 +283,6 @@ static void rtgui_dc_hw_draw_hline(struct rtgui_dc* self, int x1, int x2, int y)
 	/* convert logic to device */
 	x1 = x1 + dc->owner->extent.x1;
 	x2 = x2 + dc->owner->extent.x1;
-	if (x1 > x2) _int_swap(x1, x2);	
 	y  = y + dc->owner->extent.y1;
 
 	/* draw hline */
@@ -327,7 +321,6 @@ static void rtgui_dc_hw_blit_line (struct rtgui_dc* self, int x1, int x2, int y,
 	/* convert logic to device */
 	x1 = x1 + dc->owner->extent.x1;
 	x2 = x2 + dc->owner->extent.x1;
-	if (x1 > x2) _int_swap(x1, x2);	
 	y  = y + dc->owner->extent.y1;
 
 	dc->hw_driver->ops->draw_raw_hline(line_data, x1, x2, y);

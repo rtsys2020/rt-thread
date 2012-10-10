@@ -16,16 +16,15 @@
 #include <soc3210.h>
 
 /**
- * @addtogroup Loongson SoC3210
+ * @addtogroup Loogonson SoC3210
  */
-
 /*@{*/
 
 /**
  * this function will reset CPU
  *
  */
-void rt_hw_cpu_reset(void)
+void rt_hw_cpu_reset()
 {
 	/* open the watch-dog */
 	WD_TIMER = 0x01; /* watch dog will be timeout after 1 tick */
@@ -39,7 +38,7 @@ void rt_hw_cpu_reset(void)
  * this function will shutdown CPU
  *
  */
-void rt_hw_cpu_shutdown(void)
+void rt_hw_cpu_shutdown()
 {
 	rt_kprintf("shutdown...\n");
 

@@ -1,3 +1,5 @@
+import rtconfig
+Import('RTT_ROOT')
 from building import *
 
 cwd = str(Dir('#'))

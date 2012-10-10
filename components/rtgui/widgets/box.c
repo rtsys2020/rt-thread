@@ -14,45 +14,74 @@
 #include <rtgui/dc.h>
 #include <rtgui/widgets/box.h>
 
+#ifndef RTGUI_USING_SMALL_SIZE
 static void _rtgui_box_constructor(rtgui_box_t *box)
 {
 	/* init widget and set event handler */
-	rtgui_object_set_event_handler(RTGUI_OBJECT(box), RT_NULL);
+	rtgui_widget_set_event_handler(RTGUI_WIDGET(box), rtgui_box_event_handler);
+
+	RTGUI_WIDGET(box)->flag |= RTGUI_WIDGET_FLAG_TRANSPARENT;
+	rtgui_widget_set_event_handler(RTGUI_WIDGET(box), rtgui_box_event_handler);
 
 	/* set proper of control */
 	box->orient = RTGUI_HORIZONTAL;
 	box->border_size = RTGUI_BORDER_DEFAULT_WIDTH;
-	box->container = RT_NULL;
 }
 
-DEFINE_CLASS_TYPE(box, "box",
-	RTGUI_OBJECT_TYPE,
+DEFINE_CLASS_TYPE(box, "box", 
+	RTGUI_CONTAINER_TYPE,
 	_rtgui_box_constructor,
 	RT_NULL,
 	sizeof(struct rtgui_box));
 
-struct rtgui_box* rtgui_box_create(int orientation, int border_size)
+rt_bool_t rtgui_box_event_handler(rtgui_widget_t* widget, rtgui_event_t* event)
+{
+	struct rtgui_box* box = (struct rtgui_box*)widget;
+
+	RT_ASSERT(box != RT_NULL);
+
+	switch (event->type)
+	{
+	case RTGUI_EVENT_RESIZE:
+		/* re-layout */
+		rtgui_box_layout(box);
+		break;
+
+	default:
+		return rtgui_container_event_handler(RTGUI_WIDGET(box), event);
+	}
+
+	return RT_FALSE;
+}
+
+struct rtgui_box* rtgui_box_create(int orientation, rtgui_rect_t* rect)
 {
     struct rtgui_box* box;
 
-    box = (struct rtgui_box*) rtgui_object_create (RTGUI_BOX_TYPE);
+    box = (struct rtgui_box*) rtgui_widget_create (RTGUI_BOX_TYPE);
     if (box != RT_NULL)
     {
+		/* set proper of control */
+		rtgui_widget_set_rect(RTGUI_WIDGET(box), rect);
 		box->orient = orientation;
-		box->border_size = border_size;
 	}
 
 	return box;
 }
-RTM_EXPORT(rtgui_box_create);
 
-void rtgui_box_destroy(struct rtgui_box* box)
+void rtgui_box_append(struct rtgui_box* box, rtgui_widget_t* widget)
 {
-	rtgui_object_destroy(RTGUI_OBJECT(box));
+	/* put to box's children list */
+	rtgui_container_add_child(RTGUI_CONTAINER(box), widget);
 }
-RTM_EXPORT(rtgui_box_destroy);
 
-static void rtgui_box_layout_vertical(struct rtgui_box* box, struct rtgui_rect* extent)
+void rtgui_box_delete(struct rtgui_box* box, rtgui_widget_t* widget)
+{
+	/* remove from box's children list */
+	rtgui_container_remove_child(RTGUI_CONTAINER(box), widget);
+}
+
+static void rtgui_box_layout_vertical(rtgui_box_t* box)
 {
 	rtgui_list_t *node;
 	rt_int32_t box_width;
@@ -60,7 +89,7 @@ static void rtgui_box_layout_vertical(struct rtgui_box* box, struct rtgui_rect* 
 	rt_int32_t next_x, next_y;
 	rt_int32_t total_height, space_height;
 	struct rtgui_event_resize size_event;
-	
+
 	/* prepare the resize event */
 	RTGUI_EVENT_RESIZE_INIT(&size_event);
 
@@ -69,7 +98,7 @@ static void rtgui_box_layout_vertical(struct rtgui_box* box, struct rtgui_rect* 
 	total_height = 0;
 	space_height = 0;
 
-	rtgui_list_foreach(node, &(box->container->children))
+	rtgui_list_foreach(node, &(RTGUI_CONTAINER(box)->children))
 	{
 		rtgui_widget_t* widget = rtgui_list_entry(node, struct rtgui_widget, sibling);
 		if (widget->align & RTGUI_ALIGN_STRETCH) space_count ++;
@@ -79,18 +108,18 @@ static void rtgui_box_layout_vertical(struct rtgui_box* box, struct rtgui_rect* 
 	/* calculate the height for each spaces */
 	if (space_count != 0)
 	{
-		space_height = (rtgui_rect_height(*extent) - total_height - (box->border_size << 1)) / space_count;
+		space_height = (rtgui_rect_height(RTGUI_WIDGET(box)->extent) - total_height - (box->border_size << 1)) / space_count;
 	}
 
 	/* init (x, y) and box width */
-	next_x = extent->x1 + box->border_size;
-	next_y = extent->y1 + box->border_size;
-	box_width = rtgui_rect_width(*extent) - (box->border_size << 1);
+	next_x = RTGUI_WIDGET(box)->extent.x1 + box->border_size;
+	next_y = RTGUI_WIDGET(box)->extent.y1 + box->border_size;
+	box_width = rtgui_rect_width(RTGUI_WIDGET(box)->extent) - (box->border_size << 1);
 
 	/* layout each widget */
-	rtgui_list_foreach(node, &(box->container->children))
+	rtgui_list_foreach(node, &(RTGUI_CONTAINER(box)->children))
 	{
-		struct rtgui_rect *rect;
+		rtgui_rect_t *rect;
 		rtgui_widget_t* widget = rtgui_list_entry(node, struct rtgui_widget, sibling);
 
 		/* get extent of widget */
@@ -137,15 +166,14 @@ static void rtgui_box_layout_vertical(struct rtgui_box* box, struct rtgui_rect* 
 		size_event.y = rect->y1;
 		size_event.w = rect->x2 - rect->x1;
 		size_event.h = rect->y2 - rect->y1;
-		RTGUI_OBJECT(widget)->event_handler(RTGUI_OBJECT(widget),
-											&size_event.parent);
+		widget->event_handler(widget, &size_event.parent);
 
 		/* point to next height */
-		next_y = rect->y2 + box->border_size;
+		next_y = rect->y2;
 	}
 }
 
-static void rtgui_box_layout_horizontal(struct rtgui_box* box, struct rtgui_rect* extent)
+static void rtgui_box_layout_horizontal(rtgui_box_t* box)
 {
 	rtgui_list_t *node;
 	rt_int32_t box_height;
@@ -162,7 +190,7 @@ static void rtgui_box_layout_horizontal(struct rtgui_box* box, struct rtgui_rect
 	total_width = 0;
 	space_width = 0;
 
-	rtgui_list_foreach(node, &(box->container->children))
+	rtgui_list_foreach(node, &(RTGUI_CONTAINER(box)->children))
 	{
 		rtgui_widget_t* widget = rtgui_list_entry(node, struct rtgui_widget, sibling);
 		if (widget->align & RTGUI_ALIGN_STRETCH) space_count ++;
@@ -172,16 +200,16 @@ static void rtgui_box_layout_horizontal(struct rtgui_box* box, struct rtgui_rect
 	if (space_count != 0)
 	{
 		/* calculate the height for each spaces */
-		space_width = (rtgui_rect_width(*extent) - total_width) / space_count;
+		space_width = (rtgui_rect_width(RTGUI_WIDGET(box)->extent) - total_width) / space_count;
 	}
 
 	/* init (x, y) and box height */
-	next_x = extent->x1 + box->border_size;
-	next_y = extent->y1 + box->border_size;
-	box_height = rtgui_rect_height(*extent) - (box->border_size << 1);
+	next_x = RTGUI_WIDGET(box)->extent.x1 + box->border_size;
+	next_y = RTGUI_WIDGET(box)->extent.y1 + box->border_size;
+	box_height = rtgui_rect_height(RTGUI_WIDGET(box)->extent) - (box->border_size << 1);
 
 	/* layout each widget */
-	rtgui_list_foreach(node, &(box->container->children))
+	rtgui_list_foreach(node, &(RTGUI_CONTAINER(box)->children))
 	{
 		rtgui_rect_t *rect;
 		rtgui_widget_t* widget = rtgui_list_entry(node, struct rtgui_widget, sibling);
@@ -230,59 +258,85 @@ static void rtgui_box_layout_horizontal(struct rtgui_box* box, struct rtgui_rect
 		size_event.y = rect->y1;
 		size_event.w = rect->x2 - rect->x1;
 		size_event.h = rect->y2 - rect->y1;
-		RTGUI_OBJECT(widget)->event_handler(RTGUI_OBJECT(widget),
-											&size_event.parent);
+		widget->event_handler(widget, &size_event.parent);
 
 		/* point to next width */
-		next_x = rect->x2 + box->border_size;
+		next_x = rect->x2;
 	}
 }
 
 void rtgui_box_layout(rtgui_box_t* box)
 {
-	struct rtgui_rect extent;
     RT_ASSERT(box != RT_NULL);
 
-	if (box->container == RT_NULL) return;
-
-	rtgui_widget_get_extent(RTGUI_WIDGET(box->container), &extent);
 	if (box->orient & RTGUI_VERTICAL)
 	{
-		rtgui_box_layout_vertical(box, &extent);
+		rtgui_box_layout_vertical(box);
 	}
 	else
 	{
-		rtgui_box_layout_horizontal(box, &extent);
+		rtgui_box_layout_horizontal(box);
 	}
 
 	/* update box and its children clip */
-	if (!RTGUI_WIDGET_IS_HIDE(RTGUI_WIDGET(box->container)))
+	if (!RTGUI_WIDGET_IS_HIDE(RTGUI_WIDGET(box)))
 	{
-		rtgui_widget_update_clip(RTGUI_WIDGET(box->container));
+		rtgui_widget_update_clip(RTGUI_WIDGET(box));
 	}
 }
-RTM_EXPORT(rtgui_box_layout);
 
-void rtgui_box_layout_rect(rtgui_box_t* box, struct rtgui_rect* rect)
+rt_uint32_t rtgui_box_get_width(rtgui_box_t* box)
 {
-	RT_ASSERT(box != RT_NULL);
+	rtgui_list_t *node;
+	rt_uint32_t width;
 
-	if (box->container == RT_NULL) return;
+	width = 0;
+	rtgui_list_foreach(node, &(RTGUI_CONTAINER(box)->children))
+	{
+		rtgui_widget_t* widget = rtgui_list_entry(node, struct rtgui_widget, sibling);
+		rt_uint32_t widget_width;
 
-	if (box->orient & RTGUI_VERTICAL)
-	{
-		rtgui_box_layout_vertical(box, rect);
-	}
-	else
-	{
-		rtgui_box_layout_horizontal(box, rect);
+		widget_width = rtgui_rect_width(widget->extent);
+		if (box->orient & RTGUI_VERTICAL)
+		{
+			/* get the max width */
+			if (width < widget_width) width = widget_width;
+		}
+		else
+		{
+			/* get the total width */
+			width += widget_width;
+		}
 	}
 
-	/* update box and its children clip */
-	if (!RTGUI_WIDGET_IS_HIDE(RTGUI_WIDGET(box->container)))
-	{
-		rtgui_widget_update_clip(RTGUI_WIDGET(box->container));
-	}
+	return width;
 }
-RTM_EXPORT(rtgui_box_layout_rect);
+
+rt_uint32_t rtgui_box_get_height(rtgui_box_t* box)
+{
+	rtgui_list_t *node;
+	rt_uint32_t height;
+
+	height = 0;
+	rtgui_list_foreach(node, &(RTGUI_CONTAINER(box)->children))
+	{
+		rtgui_widget_t* widget = rtgui_list_entry(node, struct rtgui_widget, sibling);
+		rt_uint32_t widget_height;
+
+		widget_height = rtgui_rect_height(widget->extent);
+		if (box->orient & RTGUI_HORIZONTAL)
+		{
+			/* get the max height */
+			if (height < widget_height) height = widget_height;
+		}
+		else
+		{
+			/* get the total height */
+			height += widget_height;
+		}
+	}
+
+	return height;
+}
+#endif
 

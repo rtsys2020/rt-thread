@@ -1,9 +1,9 @@
  /***************************************************************************//**
  * @file    drv_rtc.h
  * @brief   RTC driver of RT-Thread RTOS for EFM32
- *  COPYRIGHT (C) 2012, RT-Thread Development Team
+ * 	COPYRIGHT (C) 2011, RT-Thread Development Team
  * @author  Bernard, onelife
- * @version 1.0
+ * @version 0.4 beta
  *******************************************************************************
  * @section License
  * The license and distribution terms for this file may be found in the file

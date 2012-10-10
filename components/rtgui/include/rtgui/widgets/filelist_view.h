@@ -1,9 +1,9 @@
 #ifndef __RTGUI_FILELIST_VIEW_H__
 #define __RTGUI_FILELIST_VIEW_H__
 
-#include <rtgui/widgets/container.h>
+#include <rtgui/widgets/view.h>
 
-#if defined(RTGUI_USING_DFS_FILERW)
+#if defined(RTGUI_USING_DFS_FILERW) || defined(RTGUI_USING_STDIO_FILERW)
 #define RTGUI_FITEM_FILE      0x0
 #define RTGUI_FITEM_DIR       0x1
 struct rtgui_file_item
@@ -24,7 +24,7 @@ DECLARE_CLASS_TYPE(filelist);
 
 struct rtgui_filelist_view
 {
-	struct rtgui_container parent;
+	struct rtgui_view parent;
 
 	/* widget private data */
 
@@ -44,12 +44,11 @@ struct rtgui_filelist_view
 };
 typedef struct rtgui_filelist_view rtgui_filelist_view_t;
 
-rtgui_filelist_view_t* rtgui_filelist_view_create(const char* directory,
-												  const char* pattern,
-												  const rtgui_rect_t* rect);
+rtgui_filelist_view_t* rtgui_filelist_view_create(rtgui_workbench_t* workbench, 
+	const char* directory, const char* pattern, const rtgui_rect_t* rect);
 void rtgui_filelist_view_destroy(rtgui_filelist_view_t* view);
 
-rt_bool_t rtgui_filelist_view_event_handler(struct rtgui_object* object, struct rtgui_event* event);
+rt_bool_t rtgui_filelist_view_event_handler(struct rtgui_widget* widget, struct rtgui_event* event);
 void rtgui_filelist_view_set_directory(rtgui_filelist_view_t* view, const char* directory);
 
 void rtgui_filelist_view_get_fullpath(rtgui_filelist_view_t* view, char* path, rt_size_t len);

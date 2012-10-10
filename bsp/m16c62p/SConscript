@@ -1,12 +1,13 @@
+import rtconfig
+Import('RTT_ROOT')
 from building import *
 
-cwd  = GetCurrentDir()
-objs = []
-list = os.listdir(cwd)
+src_c = ['application.c', 'startup.c', 'board.c', 'bsp.c', 'uart.c']
+src_asm = ['cstartup.asm', 'interrupts.asm', 'vectors.asm']
 
-for d in list:
-    path = os.path.join(cwd, d)
-    if os.path.isfile(os.path.join(path, 'SConscript')):
-        objs = objs + SConscript(os.path.join(d, 'SConscript'))
+src	= File(src_c + src_asm)
 
-Return('objs')
+CPPPATH = [RTT_ROOT + '/bsp/m16c62p']
+group = DefineGroup('Startup', src, depend = [''], CPPPATH = CPPPATH)
+
+Return('group')

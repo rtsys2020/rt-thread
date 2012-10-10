@@ -3,7 +3,7 @@
  * @brief   RT-Thread config file
  * 	COPYRIGHT (C) 2009, RT-Thread Development Team
  * @author
- * @version 1.0
+ * @version 0.4 beta
  *******************************************************************************
  * @section License
  * The license and distribution terms for this file may be found in the file
@@ -50,13 +50,12 @@
 //#define RT_RTC_DEBUG
 
 #define EFM32_DEBUG
-#define EFM32_EMU_DEBUG
 #define EFM32_ACCEL_DEBUG
 #define EFM32_SFLASH_DEBUG
 //#define EFM32_SDCARD_DEBUG
 #define EFM32_ETHERNET_DEBUG
 #define EFM32_LCD_DEBUG
-#define EFM32_KEYS_DEBUG
+
 
 /* Using Hook */
 //#define RT_USING_HOOK
@@ -107,7 +106,7 @@
  #if defined(EFM32GG_DK3750_USING_LEUART1)
  #define RT_USING_LEUART1           (0x0UL)
  #define RT_LEUART1_NAME            "debug0"
- //#define RT_LEUART1_USING_DMA       (0x0UL)
+ #define RT_LEUART1_USING_DMA       (0x0UL)
  #else
  #define RT_USING_UART1              (0x2UL)
  #define RT_UART1_NAME               "debug"
@@ -229,7 +228,6 @@
 #define EFM32_USING_SPISD                       /* MicroSD card */
 //#define EFM32_USING_ETHERNET                    /* Ethernet controller */
 #define EFM32_USING_LCD                         /* TFT LCD */
-#define EFM32_USING_KEYS                        /* Keys and joystick */
 #endif
 
 #if defined(EFM32_USING_ACCEL)
@@ -276,7 +274,7 @@
 #endif /* defined(EFM32_USING_SPISD) */
 #if defined(RT_USING_NEWLIB)
 #define RT_USING_DFS_DEVFS
-#endif /* defined(RT_USING_NEWLIB) */
+#endif /* defined(RT_USING_DFS_DEVFS) */
 
 /* SECTION: lwip, a lighwight TCP/IP protocol stack */
 #if defined(EFM32_USING_ETHERNET)
@@ -335,7 +333,7 @@
 /* SECTION: RTGUI support */
 #if defined(EFM32_USING_LCD)
 #define LCD_USING_DEVICE_NAME 	    RT_USART1_NAME
-#define LCD_DEVICE_NAME             "lcd"
+#define LCD_DEVICE_NAME             "spiLcd"
 /* using RTGUI support */
 #define RT_USING_RTGUI
 
@@ -356,11 +354,10 @@
 /* use small size in RTGUI */
 /* #define RTGUI_USING_SMALL_SIZE */
 /* use mouse cursor */
-#define RTGUI_USING_MOUSE_CURSOR
+/* #define RTGUI_USING_MOUSE_CURSOR */
 /* RTGUI image options */
 #define RTGUI_IMAGE_XPM
 //#define RTGUI_IMAGE_JPEG
-#define RTGUI_IMAGE_TJPGD
 //#define RTGUI_IMAGE_PNG
 #define RTGUI_IMAGE_BMP
 #endif /* defined(EFM32_USING_LCD) */

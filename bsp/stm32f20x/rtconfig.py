@@ -1,25 +1,17 @@
-import os
-
 # toolchains options
 ARCH='arm'
 CPU='cortex-m3'
-CROSS_TOOL='gcc'
-
-if os.getenv('RTT_CC'):
-	CROSS_TOOL = os.getenv('RTT_CC')
+CROSS_TOOL='keil'
 
 if  CROSS_TOOL == 'gcc':
 	PLATFORM 	= 'gcc'
-	EXEC_PATH 	= 'C:/Program Files (x86)/CodeSourcery/Sourcery G++ Lite/bin'
+	EXEC_PATH 	= 'E:/SourceryGCC/bin'
 elif CROSS_TOOL == 'keil':
 	PLATFORM 	= 'armcc'
-	EXEC_PATH 	= 'C:/Keil'
+	EXEC_PATH 	= 'E:/Keil'
 elif CROSS_TOOL == 'iar':
 	PLATFORM 	= 'iar'
-	IAR_PATH 	= 'C:/Program Files/IAR Systems/Embedded Workbench 6.0 Evaluation'	
-
-if os.getenv('RTT_EXEC_PATH'):
-	EXEC_PATH = os.getenv('RTT_EXEC_PATH')
+	IAR_PATH 	= 'E:/Program Files/IAR Systems/Embedded Workbench 5.4 Evaluation_0'	
 
 BUILD = 'debug'
 
@@ -47,7 +39,7 @@ if PLATFORM == 'gcc':
         CFLAGS += ' -O0 -gdwarf-2'
         AFLAGS += ' -gdwarf-2'
     else:
-        CFLAGS += ' -O3'
+        CFLAGS += ' -O2'
 
     POST_ACTION = OBJCPY + ' -O binary $TARGET rtthread.bin\n' + SIZE + ' $TARGET \n'
 

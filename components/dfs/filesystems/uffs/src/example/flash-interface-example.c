@@ -24,7 +24,7 @@
   this file does not by itself cause the resulting work to be covered
   by the GNU General Public License. However the source code for this
   file must still be made available in accordance with section (3) of
-  the GNU General Public License v2.
+  the GNU General Public License v2.my_application_main_entry
  
   This exception does not invalidate any other reasons why a work based
   on this file might be covered by the GNU General Public License.
@@ -36,14 +36,13 @@
  */
   
 #include <string.h>
-#include "uffs_config.h"
-#include "uffs/uffs_os.h"
+
 #include "uffs/uffs_device.h"
 #include "uffs/uffs_flash.h"
 #include "uffs/uffs_mtb.h"
 #include "uffs/uffs_fs.h"
 
-#define PFX "ndrv: "
+#define PFX "nand-drv:"
 
 struct my_nand_chip {
 	void *IOR_ADDR;
@@ -71,7 +70,7 @@ struct my_nand_chip {
 
 
 /* impelent the following functions for your NAND flash */
-#define CHIP_SET_CLE(chip) { chip = chip; }
+#define CHIP_SET_CLE(chip) {}
 #define CHIP_CLR_CLE(chip) {}
 #define CHIP_SET_ALE(chip) {}
 #define CHIP_CLR_ALE(chip) {}
@@ -92,7 +91,7 @@ struct my_nand_chip {
 #if CONFIG_USE_STATIC_MEMORY_ALLOCATOR == 0
 int main()
 {
-	uffs_Perror(UFFS_MSG_NORMAL, "This example need CONFIG_USE_STATIC_MEMORY_ALLOCATOR = 1");
+	uffs_Perror(UFFS_ERR_NORMAL, "This example need CONFIG_USE_STATIC_MEMORY_ALLOCATOR = 1");
 	return 0;
 }
 #else
@@ -238,7 +237,7 @@ ext:
 
 static int nand_erase_block(uffs_Device *dev, u32 block)
 {
-	u8 val = 0;
+	u8 val;
 	struct my_nand_chip *chip = (struct my_nand_chip *) dev->attr->_private;
 
 	CHIP_CLR_NCS(chip);
@@ -257,8 +256,6 @@ static int nand_erase_block(uffs_Device *dev, u32 block)
 	READ_DATA(chip, &val, 1);
 
 	CHIP_SET_NCS(chip);
-
-	val = val; // just for eliminating warning
 
 	return PARSE_STATUS(val);
 }
@@ -282,8 +279,6 @@ static int nand_release_flash(uffs_Device *dev)
 {
 	// release your hardware here
 	struct my_nand_chip *chip = (struct my_nand_chip *) dev->attr->_private;
-
-	chip = chip;
 
 	return 0;
 }
@@ -341,7 +336,6 @@ static void setup_flash_storage(struct uffs_StorageAttrSt *attr)
 {
 	memset(attr, 0, sizeof(struct uffs_StorageAttrSt));
 	
-	// setup NAND flash attributes.	
 	attr->total_blocks = TOTAL_BLOCKS;			/* total blocks */
 	attr->page_data_size = PAGE_DATA_SIZE;		/* page data size */
 	attr->pages_per_block = PAGES_PER_BLOCK;	/* pages per block */
@@ -353,11 +347,9 @@ static void setup_flash_storage(struct uffs_StorageAttrSt *attr)
 
 static URET my_InitDevice(uffs_Device *dev)
 {
-	dev->attr = &g_my_flash_storage;			// NAND flash attributes
-	dev->attr->_private = (void *) &g_nand_chip;// hook nand_chip data structure to attr->_private
-	dev->ops = &g_my_nand_ops;					// NAND driver
-
-	init_nand_chip(&g_nand_chip);
+	dev->attr = &g_my_flash_storage;
+	dev->attr->_private = (void *) &g_nand_chip;	// hook nand_chip data structure to attr->_private
+	dev->ops = &g_my_nand_ops;
     
 	return U_SUCC;
 }
@@ -387,43 +379,19 @@ static int my_init_filesystem(void)
 		uffs_RegisterMountTable(mtbl);
 		mtbl++;
 	}
-
-	// mount partitions
-	for (mtbl = &(demo_mount_table[0]); mtbl->mount != NULL; mtbl++) {
-		uffs_Mount(mtbl->mount);
-	}
-
-	return uffs_InitFileSystemObjects() == U_SUCC ? 0 : -1;
-}
-
-static int my_release_filesystem(void)
-{
-	uffs_MountTable *mtb;
-	int ret = 0;
-
-	// unmount parttions
-	for (mtb = &(demo_mount_table[0]); ret == 0 && mtb->mount != NULL; mtb++) {
-		ret = uffs_UnMount(mtb->mount);
-	}
-
-	// release objects
-	if (ret == 0)
-		ret = (uffs_ReleaseFileSystemObjects() == U_SUCC ? 0 : -1);
-
-	return ret;
+	
+	return uffs_InitMountTable() == U_SUCC ? 0 : -1;
 }
 
 /* application entry */
 int main()
 {
-	uffs_SetupDebugOutput(); 	// setup debug output as early as possible
-
 	my_init_filesystem();
 
 	// ... my application codes ....
 	// read/write/create/delete files ...
 
-	my_release_filesystem();
+	uffs_ReleaseMountTable();
 
 	return 0;
 }

@@ -18,12 +18,6 @@
 #include <rtgui/filerw.h>
 #include <rtgui/region.h>
 
-enum rtgui_img_zoom
-{  
-	RTGUI_IMG_ZOOM_NEAREST,
-	RTGUI_IMG_ZOOM_BILINEAR
-};
-
 struct rtgui_image;
 struct rtgui_image_engine
 {
@@ -37,8 +31,6 @@ struct rtgui_image_engine
 	void (*image_unload)(struct rtgui_image* image);
 
 	void (*image_blit)(struct rtgui_image* image, struct rtgui_dc* dc, struct rtgui_rect* rect);
-	struct rtgui_image* (*image_zoom)(struct rtgui_image* image, float scalew, float scaleh, rt_uint32_t mode);
-	struct rtgui_image* (*image_rotate)(struct rtgui_image* image, float angle);
 };
 
 struct rtgui_image_palette
@@ -67,8 +59,7 @@ typedef struct rtgui_image rtgui_image_t;
 /* init rtgui image system */
 void rtgui_system_image_init(void);
 
-#if defined(RTGUI_USING_DFS_FILERW)
-struct rtgui_image_engine* rtgui_image_get_engine_by_filename(const char* fn);
+#if defined(RTGUI_USING_DFS_FILERW) || defined(RTGUI_USING_STDIO_FILERW)
 struct rtgui_image* rtgui_image_create_from_file(const char* type, const char* filename, rt_bool_t load);
 struct rtgui_image* rtgui_image_create(const char* filename, rt_bool_t load);
 #endif
@@ -84,8 +75,6 @@ void rtgui_image_register_engine(struct rtgui_image_engine* engine);
 /* blit an image on DC */
 void rtgui_image_blit(struct rtgui_image* image, struct rtgui_dc* dc, struct rtgui_rect* rect);
 struct rtgui_image_palette* rtgui_image_palette_create(rt_uint32_t ncolors);
-rtgui_image_t* rtgui_image_zoom(rtgui_image_t* image, float scalew, float scaleh, rt_uint32_t mode);
-rtgui_image_t* rtgui_image_rotate(rtgui_image_t* image, float angle);
 
 #endif
 

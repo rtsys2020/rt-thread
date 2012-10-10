@@ -2,7 +2,7 @@
 #include <rtgui/rtgui_theme.h>
 #include <rtgui/widgets/combobox.h>
 
-static rt_bool_t rtgui_combobox_pulldown_hide(struct rtgui_object* object, struct rtgui_event* event);
+static rt_bool_t rtgui_combobox_pulldown_hide(struct rtgui_widget* widget, struct rtgui_event* event);
 const static rt_uint8_t down_arrow[]  = {0xff, 0x7e, 0x3c, 0x18};
 
 static void _rtgui_combobox_constructor(rtgui_combobox_t *box)
@@ -10,10 +10,10 @@ static void _rtgui_combobox_constructor(rtgui_combobox_t *box)
 	rtgui_rect_t rect = {0, 0, RTGUI_COMBOBOX_WIDTH, RTGUI_COMBOBOX_HEIGHT};
 
 	/* init widget and set event handler */
-	rtgui_object_set_event_handler(RTGUI_OBJECT(box), rtgui_combobox_event_handler);
+	rtgui_widget_set_event_handler(RTGUI_WIDGET(box), rtgui_combobox_event_handler);
 	rtgui_widget_set_rect(RTGUI_WIDGET(box), &rect);
 
-	RTGUI_WIDGET_TEXTALIGN(box) = RTGUI_ALIGN_CENTER_VERTICAL;
+	RTGUI_WIDGET_TEXTALIGN(RTGUI_WIDGET(box)) = RTGUI_ALIGN_CENTER_VERTICAL;
 
 	box->pd_pressed = RT_FALSE;
 	box->current_item = 0;
@@ -30,33 +30,29 @@ static void _rtgui_combobox_destructor(rtgui_combobox_t *box)
 	box->pd_win    = RT_NULL;
 }
 
-rt_bool_t rtgui_combobox_pdwin_onitem(struct rtgui_object* object, struct rtgui_event* event)
+void rtgui_combobox_pdwin_onitem(struct rtgui_widget* widget, struct rtgui_event* event)
 {
-	struct rtgui_widget *widget;
 	rtgui_win_t* pd_win;
 	rtgui_combobox_t* combo;
 	rtgui_listbox_t* list;
 
-	RT_ASSERT(object != RT_NULL);
-
-	widget = RTGUI_WIDGET(object);
 	list = RTGUI_LISTBOX(widget);
 	pd_win = RTGUI_WIN(rtgui_widget_get_toplevel(widget));
 	combo = RTGUI_COMBOBOX(pd_win->user_data);
 	combo->current_item = list->current_item;
 
 	if (combo->on_selected != RT_NULL)
-		combo->on_selected(RTGUI_OBJECT(combo), RT_NULL);
+		combo->on_selected(RTGUI_WIDGET(combo), RT_NULL);
 
 	rtgui_win_hiden(pd_win);
 	rtgui_widget_update(RTGUI_WIDGET(combo));
 
-	return RT_FALSE;
+	return ;
 }
 
-rt_bool_t rtgui_combobox_pdwin_ondeactive(struct rtgui_object* object, struct rtgui_event* event)
+rt_bool_t rtgui_combobox_pdwin_ondeactive(struct rtgui_widget* widget, struct rtgui_event* event)
 {
-	rtgui_win_hiden(RTGUI_WIN(object));
+	rtgui_win_hiden(RTGUI_WIN(widget));
 	return RT_TRUE;
 }
 
@@ -96,11 +92,11 @@ static void rtgui_combobox_ondraw(struct rtgui_combobox* box)
 	dc = rtgui_dc_begin_drawing(RTGUI_WIDGET(box));
 	if (dc == RT_NULL) return;
 
-	bc = RTGUI_WIDGET_BACKGROUND(box);
+	bc = RTGUI_WIDGET_BACKGROUND(RTGUI_WIDGET(box));
 
 	/* get widget rect */
 	rtgui_widget_get_rect(RTGUI_WIDGET(box), &rect);
-	RTGUI_WIDGET_BACKGROUND(box) = white;
+	RTGUI_WIDGET_BACKGROUND(RTGUI_WIDGET(box)) = white;
 
 	/* fill widget rect with background color */
 	rtgui_dc_fill_rect(dc, &rect);
@@ -114,7 +110,7 @@ static void rtgui_combobox_ondraw(struct rtgui_combobox* box)
 	}
 
 	/* restore background color */
-	RTGUI_WIDGET_BACKGROUND(box) = bc;
+	RTGUI_WIDGET_BACKGROUND(RTGUI_WIDGET(box)) = bc;
 
 	/* draw pull down button */
 	rect.x1 = rect.x2 - RTGUI_COMBOBOX_BUTTON_WIDTH;
@@ -190,19 +186,15 @@ static rt_bool_t rtgui_combobox_onmouse_button(struct rtgui_combobox* box, struc
 	return RT_FALSE;
 }
 
-rt_bool_t rtgui_combobox_event_handler(struct rtgui_object* object, struct rtgui_event* event)
+rt_bool_t rtgui_combobox_event_handler(struct rtgui_widget* widget, struct rtgui_event* event)
 {
-	struct rtgui_combobox *box;
-	RTGUI_WIDGET_EVENT_HANDLER_PREPARE
-
-	box = RTGUI_COMBOBOX(object);
+	struct rtgui_combobox* box = (struct rtgui_combobox*)widget;
 
 	switch (event->type)
 	{
 	case RTGUI_EVENT_PAINT:
 #ifndef RTGUI_USING_SMALL_SIZE
-		if (widget->on_draw != RT_NULL)
-			widget->on_draw(RTGUI_OBJECT(widget), event);
+		if (widget->on_draw != RT_NULL) widget->on_draw(widget, event);
 		else
 #endif
 			rtgui_combobox_ondraw(box);
@@ -227,23 +219,14 @@ rt_bool_t rtgui_combobox_event_handler(struct rtgui_object* object, struct rtgui
 			}
 		}
 		break;
-	default:
-		return rtgui_widget_event_handler(object, event);
 	}
 
 	return RT_FALSE;
 }
 
-static rt_bool_t rtgui_combobox_pulldown_hide(struct rtgui_object* object, struct rtgui_event* event)
+static rt_bool_t rtgui_combobox_pulldown_hide(struct rtgui_widget* widget, struct rtgui_event* event)
 {
-	struct rtgui_widget *widget;
-	struct rtgui_combobox *box;
-
-	RT_ASSERT(object != RT_NULL);
-	RT_ASSERT(event != RT_NULL);
-
-	widget = RTGUI_WIDGET(object);
-	box = RTGUI_COMBOBOX(object);
+	struct rtgui_combobox* box;
 
 	if (widget == RT_NULL) return RT_TRUE;
 
@@ -270,7 +253,7 @@ struct rtgui_listbox_item* rtgui_combox_get_select(struct rtgui_combobox* box)
 	return RT_NULL;
 }
 
-void rtgui_combobox_set_onselected(struct rtgui_combobox* box, rtgui_event_handler_ptr func)
+void rtgui_combobox_set_onselected(struct rtgui_combobox* box, rtgui_onitem_func_t func)
 {
 	box->on_selected = func;
 }

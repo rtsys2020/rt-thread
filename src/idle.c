@@ -1,7 +1,7 @@
 /*
  * File      : idle.c
  * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2006 - 2012, RT-Thread Development Team
+ * COPYRIGHT (C) 2006 - 2011, RT-Thread Development Team
  *
  * The license and distribution terms for this file may be
  * found in the file LICENSE in this distribution or at
@@ -15,6 +15,7 @@
 
 #include <rthw.h>
 #include <rtthread.h>
+#include "kservice.h"
 
 #ifndef IDLE_THREAD_STACK_SIZE
 #if defined (RT_USING_HOOK) || defined(RT_USING_HEAP)
@@ -34,7 +35,6 @@ extern rt_list_t rt_thread_defunct;
 /**
  * @addtogroup Hook
  */
-
 /*@{*/
 
 static void (*rt_thread_idle_hook)();
@@ -50,7 +50,6 @@ void rt_thread_idle_sethook(void (*hook)())
 {
 	rt_thread_idle_hook = hook;
 }
-
 /*@}*/
 #endif
 
@@ -93,11 +92,10 @@ void rt_thread_idle_excute(void)
 			/* remove defunct thread */
 			rt_list_remove(&(thread->tlist));
 			/* invoke thread cleanup */
-			if (thread->cleanup != RT_NULL)
-				thread->cleanup(thread);
+			if (thread->cleanup != RT_NULL) thread->cleanup(thread);
 
 			/* if it's a system object, not delete it */
-			if (rt_object_is_systemobject((rt_object_t)thread) == RT_TRUE)
+			if (rt_object_is_systemobject((rt_object_t)thread) == RT_EOK)
 			{
 				/* enable interrupt */
 				rt_hw_interrupt_enable(lock);
@@ -138,11 +136,10 @@ void rt_thread_idle_excute(void)
 			{
 				module->nref --;
 			}
-
-			/* unload module */
-			if (module->nref == 0)
-				rt_module_unload(module);
 		}
+
+		/* unload module */
+		if (module->nref == 0)	rt_module_unload(module);
 #endif
 	}
 }
@@ -169,7 +166,7 @@ static void rt_thread_idle_entry(void *parameter)
  */
 void rt_thread_idle_init(void)
 {
-	/* initialize thread */
+	/* init thread */
 	rt_thread_init(&idle,
 		"tidle",
 		rt_thread_idle_entry, RT_NULL,

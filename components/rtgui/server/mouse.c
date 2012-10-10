@@ -52,6 +52,9 @@ struct rtgui_cursor
 	rt_uint8_t		*win_top, *win_bottom;
 	rt_bool_t		win_rect_show, win_rect_has_saved;
 #endif
+
+	/* screen framebuffer */
+	rt_uint8_t*		framebuffer;
 };
 
 struct rtgui_cursor* _rtgui_cursor;
@@ -124,11 +127,9 @@ static void rtgui_winrect_show		(void);
 #endif
 
 #define WIN_MOVE_BORDER	4
-void rtgui_mouse_init(void)
+void rtgui_mouse_init()
 {
 	const struct rtgui_graphic_driver* gd = rtgui_graphic_driver_get_default();
-
-	if (_rtgui_cursor != RT_NULL) rtgui_mouse_fini();
 
 	_rtgui_cursor = (struct rtgui_cursor*) rtgui_malloc(sizeof(struct rtgui_cursor));
 	rt_memset(_rtgui_cursor, 0, sizeof(struct rtgui_cursor));
@@ -139,6 +140,7 @@ void rtgui_mouse_init(void)
 
 	/* init cursor */
 	_rtgui_cursor->bpp = gd->bits_per_pixel/8;
+	_rtgui_cursor->framebuffer = rtgui_graphic_driver_get_framebuffer(gd);
 	_rtgui_cursor->screen_pitch = _rtgui_cursor->bpp * gd->width;
 
 #ifdef RTGUI_USING_MOUSE_CURSOR
@@ -178,27 +180,6 @@ void rtgui_mouse_init(void)
 	_rtgui_cursor->win_top		= rtgui_malloc(_rtgui_cursor->bpp * gd->width  * WIN_MOVE_BORDER);
 	_rtgui_cursor->win_bottom	= rtgui_malloc(_rtgui_cursor->bpp * gd->width  * WIN_MOVE_BORDER);
 #endif
-}
-
-void rtgui_mouse_fini(void)
-{
-	if (_rtgui_cursor != RT_NULL)
-	{
-#ifdef RTGUI_USING_WINMOVE
-		rtgui_free(_rtgui_cursor->win_left);
-		rtgui_free(_rtgui_cursor->win_right);
-		rtgui_free(_rtgui_cursor->win_top);
-		rtgui_free(_rtgui_cursor->win_bottom);
-#endif
-#ifdef RTGUI_USING_MOUSE_CURSOR
-		rt_mutex_detach(&cursor_mutex);
-		rtgui_image_destroy(_rtgui_cursor->cursor_image);
-		rtgui_free(_rtgui_cursor->cursor_saved);
-#endif
-		rtgui_free(_rtgui_cursor);
-
-		_rtgui_cursor = RT_NULL;
-	}
 }
 
 void rtgui_mouse_moveto(int x, int y)
@@ -319,7 +300,7 @@ static void rtgui_cursor_restore()
 	rt_base_t idx, height, cursor_pitch;
 	rt_uint8_t *cursor_ptr, *fb_ptr;
 
-	fb_ptr = rtgui_graphic_driver_get_default_framebuffer() + _rtgui_cursor->cy * _rtgui_cursor->screen_pitch
+	fb_ptr = _rtgui_cursor->framebuffer + _rtgui_cursor->cy * _rtgui_cursor->screen_pitch
 		+ _rtgui_cursor->cx * _rtgui_cursor->bpp;
 	cursor_ptr = _rtgui_cursor->cursor_saved;
 
@@ -346,7 +327,7 @@ static void rtgui_cursor_save()
 	rt_base_t idx, height, cursor_pitch;
 	rt_uint8_t *cursor_ptr, *fb_ptr;
 
-	fb_ptr = rtgui_graphic_driver_get_default_framebuffer() + _rtgui_cursor->cy * _rtgui_cursor->screen_pitch +
+	fb_ptr = _rtgui_cursor->framebuffer + _rtgui_cursor->cy * _rtgui_cursor->screen_pitch +
 		_rtgui_cursor->cx * _rtgui_cursor->bpp;
 	cursor_ptr = _rtgui_cursor->cursor_saved;
 
@@ -451,7 +432,7 @@ static void rtgui_winrect_show()
 	rt_uint16_t x, y;
 	rtgui_color_t c;
 	rtgui_rect_t screen_rect, win_rect, win_rect_inner;
-	void (*set_pixel) (rtgui_color_t *c, int x, int y);
+	void (*set_pixel) (rtgui_color_t *c, rt_base_t x, rt_base_t y);
 
 	c = black;
 	set_pixel = rtgui_graphic_driver_get_default()->ops->set_pixel;
@@ -507,11 +488,10 @@ static void rtgui_winrect_show()
 
 static void rtgui_winrect_restore()
 {
-	rt_uint8_t *winrect_ptr, *fb_ptr, *driver_fb;
+	rt_uint8_t *winrect_ptr, *fb_ptr;
 	int winrect_pitch, idx;
 	rtgui_rect_t screen_rect, win_rect;
 
-	driver_fb = rtgui_graphic_driver_get_default_framebuffer();
 	win_rect = _rtgui_cursor->win_rect;
 
 	rtgui_graphic_driver_get_rect(rtgui_graphic_driver_get_default(),
@@ -519,7 +499,7 @@ static void rtgui_winrect_restore()
 	rtgui_rect_intersect(&screen_rect, &win_rect);
 
 	/* restore winrect left */
-	fb_ptr = driver_fb + win_rect.y1 * _rtgui_cursor->screen_pitch +
+	fb_ptr = _rtgui_cursor->framebuffer + win_rect.y1 * _rtgui_cursor->screen_pitch +
 		win_rect.x1 * _rtgui_cursor->bpp;
 	winrect_ptr = _rtgui_cursor->win_left;
 	winrect_pitch = WIN_MOVE_BORDER * _rtgui_cursor->bpp;
@@ -527,7 +507,7 @@ static void rtgui_winrect_restore()
 		(win_rect.y2 - win_rect.y1), winrect_pitch);
 
 	/* restore winrect right */
-	fb_ptr = driver_fb + win_rect.y1 * _rtgui_cursor->screen_pitch +
+	fb_ptr = _rtgui_cursor->framebuffer + win_rect.y1 * _rtgui_cursor->screen_pitch +
 		(win_rect.x2 - WIN_MOVE_BORDER) * _rtgui_cursor->bpp;
 	winrect_ptr = _rtgui_cursor->win_right;
 	winrect_pitch = WIN_MOVE_BORDER * _rtgui_cursor->bpp;
@@ -535,7 +515,7 @@ static void rtgui_winrect_restore()
 		(win_rect.y2 - win_rect.y1), winrect_pitch);
 
 	/* restore winrect top */
-	fb_ptr = driver_fb + win_rect.y1 * _rtgui_cursor->screen_pitch +
+	fb_ptr = _rtgui_cursor->framebuffer + win_rect.y1 * _rtgui_cursor->screen_pitch +
 		(win_rect.x1 + WIN_MOVE_BORDER)* _rtgui_cursor->bpp;
 	winrect_ptr = _rtgui_cursor->win_top;
 	winrect_pitch = (win_rect.x2 - win_rect.x1 - 2 * WIN_MOVE_BORDER) * _rtgui_cursor->bpp;
@@ -543,7 +523,7 @@ static void rtgui_winrect_restore()
 		WIN_MOVE_BORDER, winrect_pitch);
 
 	/* restore winrect bottom */
-	fb_ptr = driver_fb + (win_rect.y2 - WIN_MOVE_BORDER) * _rtgui_cursor->screen_pitch +
+	fb_ptr = _rtgui_cursor->framebuffer + (win_rect.y2 - WIN_MOVE_BORDER) * _rtgui_cursor->screen_pitch +
 		(win_rect.x1 + WIN_MOVE_BORDER) * _rtgui_cursor->bpp;
 	winrect_ptr = _rtgui_cursor->win_bottom;
 	display_direct_memcpy(winrect_ptr, fb_ptr, winrect_pitch, _rtgui_cursor->screen_pitch,
@@ -552,11 +532,10 @@ static void rtgui_winrect_restore()
 
 static void rtgui_winrect_save()
 {
-	rt_uint8_t *winrect_ptr, *fb_ptr, *driver_fb;
+	rt_uint8_t *winrect_ptr, *fb_ptr;
 	int winrect_pitch, idx;
 	rtgui_rect_t screen_rect, win_rect;
 
-	driver_fb = rtgui_graphic_driver_get_default_framebuffer();
 	win_rect = _rtgui_cursor->win_rect;
 
 	rtgui_graphic_driver_get_rect(rtgui_graphic_driver_get_default(),
@@ -567,7 +546,7 @@ static void rtgui_winrect_save()
 	_rtgui_cursor->win_rect_has_saved = RT_TRUE;
 
 	/* save winrect left */
-	fb_ptr = driver_fb + win_rect.y1 * _rtgui_cursor->screen_pitch +
+	fb_ptr = _rtgui_cursor->framebuffer + win_rect.y1 * _rtgui_cursor->screen_pitch +
 		win_rect.x1 * _rtgui_cursor->bpp;
 	winrect_ptr = _rtgui_cursor->win_left;
 	winrect_pitch = WIN_MOVE_BORDER * _rtgui_cursor->bpp;
@@ -575,7 +554,7 @@ static void rtgui_winrect_save()
 		(win_rect.y2 - win_rect.y1), winrect_pitch);
 
 	/* save winrect right */
-	fb_ptr = driver_fb + win_rect.y1 * _rtgui_cursor->screen_pitch +
+	fb_ptr = _rtgui_cursor->framebuffer + win_rect.y1 * _rtgui_cursor->screen_pitch +
 		(win_rect.x2 - WIN_MOVE_BORDER) * _rtgui_cursor->bpp;
 	winrect_ptr = _rtgui_cursor->win_right;
 	winrect_pitch = WIN_MOVE_BORDER * _rtgui_cursor->bpp;
@@ -583,7 +562,7 @@ static void rtgui_winrect_save()
 		(win_rect.y2 - win_rect.y1), winrect_pitch);
 
 	/* save winrect top */
-	fb_ptr = driver_fb + win_rect.y1 * _rtgui_cursor->screen_pitch +
+	fb_ptr = _rtgui_cursor->framebuffer + win_rect.y1 * _rtgui_cursor->screen_pitch +
 		(win_rect.x1 + WIN_MOVE_BORDER)* _rtgui_cursor->bpp;
 	winrect_ptr = _rtgui_cursor->win_top;
 	winrect_pitch = (win_rect.x2 - win_rect.x1 - 2 * WIN_MOVE_BORDER) * _rtgui_cursor->bpp;
@@ -591,7 +570,7 @@ static void rtgui_winrect_save()
 		WIN_MOVE_BORDER, winrect_pitch);
 
 	/* save winrect bottom */
-	fb_ptr = driver_fb + (win_rect.y2 - WIN_MOVE_BORDER) * _rtgui_cursor->screen_pitch +
+	fb_ptr = _rtgui_cursor->framebuffer + (win_rect.y2 - WIN_MOVE_BORDER) * _rtgui_cursor->screen_pitch +
 		(win_rect.x1 + WIN_MOVE_BORDER) * _rtgui_cursor->bpp;
 	winrect_ptr = _rtgui_cursor->win_bottom;
 	display_direct_memcpy(fb_ptr, winrect_ptr, _rtgui_cursor->screen_pitch, winrect_pitch,

@@ -26,41 +26,38 @@ extern "C" {
 #endif
 
 #define RTGUI_WIDGET_FLAG_DEFAULT		0x0000
-#define RTGUI_WIDGET_FLAG_SHOWN			0x0001
+#define RTGUI_WIDGET_FLAG_HIDE			0x0001
 #define RTGUI_WIDGET_FLAG_DISABLE		0x0002
 #define RTGUI_WIDGET_FLAG_FOCUS			0x0004
 #define RTGUI_WIDGET_FLAG_TRANSPARENT	0x0008
 #define RTGUI_WIDGET_FLAG_FOCUSABLE		0x0010
 #define RTGUI_WIDGET_FLAG_DC_VISIBLE	0x0100
 
-/* rtgui widget attribute */
-#define RTGUI_WIDGET_FOREGROUND(w) 		(RTGUI_WIDGET(w)->gc.foreground)
-#define RTGUI_WIDGET_BACKGROUND(w)		(RTGUI_WIDGET(w)->gc.background)
-#define RTGUI_WIDGET_TEXTALIGN(w)		(RTGUI_WIDGET(w)->gc.textalign)
-#define RTGUI_WIDGET_FONT(w)			(RTGUI_WIDGET(w)->gc.font)
-#define RTGUI_WIDGET_FLAG(w)			(RTGUI_WIDGET(w)->flag)
-#define RTGUI_WIDGET_ALIGN(w)			(RTGUI_WIDGET(w)->align)
-#define RTGUI_WIDGET_BORDER(w)			(RTGUI_WIDGET(w)->border)
-#define RTGUI_WIDGET_BORDER_STYLE(w)	(RTGUI_WIDGET(w)->border_style)
+#define RTGUI_WIDGET_UNHIDE(w)			(w)->flag &= ~RTGUI_WIDGET_FLAG_HIDE
+#define RTGUI_WIDGET_HIDE(w)			(w)->flag |= RTGUI_WIDGET_FLAG_HIDE
+#define RTGUI_WIDGET_IS_HIDE(w)			((w)->flag & RTGUI_WIDGET_FLAG_HIDE)
 
-#define RTGUI_WIDGET_UNHIDE(w)			RTGUI_WIDGET_FLAG(w) |= RTGUI_WIDGET_FLAG_SHOWN
-#define RTGUI_WIDGET_HIDE(w)			RTGUI_WIDGET_FLAG(w) &= ~RTGUI_WIDGET_FLAG_SHOWN
-#define RTGUI_WIDGET_IS_HIDE(w)			(!(RTGUI_WIDGET_FLAG(w) & RTGUI_WIDGET_FLAG_SHOWN))
+#define RTGUI_WIDGET_ENABLE(w)			(w)->flag &= ~RTGUI_WIDGET_FLAG_DISABLE
+#define RTGUI_WIDGET_DISABLE(w)			(w)->flag |= RTGUI_WIDGET_FLAG_DISABLE
+#define RTGUI_WIDGET_IS_ENABLE(w)		!(w->flag & RTGUI_WIDGET_FLAG_DISABLE)
 
-#define RTGUI_WIDGET_ENABLE(w)			RTGUI_WIDGET_FLAG(w) &= ~RTGUI_WIDGET_FLAG_DISABLE
-#define RTGUI_WIDGET_DISABLE(w)			RTGUI_WIDGET_FLAG(w) |= RTGUI_WIDGET_FLAG_DISABLE
-#define RTGUI_WIDGET_IS_ENABLE(w)		(!((RTGUI_WIDGET_FLAG(w) & RTGUI_WIDGET_FLAG_DISABLE)))
+#define RTGUI_WIDGET_UNFOCUS(w)			(w)->flag &= ~RTGUI_WIDGET_FLAG_FOCUS
+#define RTGUI_WIDGET_FOCUS(w)			(w)->flag |= RTGUI_WIDGET_FLAG_FOCUS
+#define RTGUI_WIDGET_IS_FOCUSED(w)		((w)->flag & RTGUI_WIDGET_FLAG_FOCUS)
 
-#define RTGUI_WIDGET_UNFOCUS(w)			RTGUI_WIDGET_FLAG(w) &= ~RTGUI_WIDGET_FLAG_FOCUS
-#define RTGUI_WIDGET_FOCUS(w)			RTGUI_WIDGET_FLAG(w) |= RTGUI_WIDGET_FLAG_FOCUS
-#define RTGUI_WIDGET_IS_FOCUSED(w)		(RTGUI_WIDGET_FLAG(w) & RTGUI_WIDGET_FLAG_FOCUS)
+#define RTGUI_WIDGET_IS_FOCUSABLE(w) 	((w)->flag & RTGUI_WIDGET_FLAG_FOCUSABLE)
 
-#define RTGUI_WIDGET_IS_FOCUSABLE(w) 	(RTGUI_WIDGET_FLAG(w) & RTGUI_WIDGET_FLAG_FOCUSABLE)
-
-#define RTGUI_WIDGET_IS_DC_VISIBLE(w)	(RTGUI_WIDGET_FLAG(w) & RTGUI_WIDGET_FLAG_DC_VISIBLE)
-#define RTGUI_WIDGET_DC_SET_VISIBLE(w)	RTGUI_WIDGET_FLAG(w) |= RTGUI_WIDGET_FLAG_DC_VISIBLE 
-#define RTGUI_WIDGET_DC_SET_UNVISIBLE(w) RTGUI_WIDGET_FLAG(w) &= ~RTGUI_WIDGET_FLAG_DC_VISIBLE
+#define RTGUI_WIDGET_IS_DC_VISIBLE(w)	((w)->flag & RTGUI_WIDGET_FLAG_DC_VISIBLE)
+#define RTGUI_WIDGET_DC_SET_VISIBLE(w)	(w)->flag |= RTGUI_WIDGET_FLAG_DC_VISIBLE 
+#define RTGUI_WIDGET_DC_SET_UNVISIBLE(w) (w)->flag &= ~RTGUI_WIDGET_FLAG_DC_VISIBLE
 #define RTGUI_WIDGET_DC(w)				((struct rtgui_dc*)&((w)->dc_type))
+
+/* get rtgui widget object */
+#define RTGUI_WIDGET_FOREGROUND(w) 		((w)->gc.foreground)
+#define RTGUI_WIDGET_BACKGROUND(w)		((w)->gc.background)
+#define RTGUI_WIDGET_TEXTALIGN(w)		((w)->gc.textalign)
+#define RTGUI_WIDGET_FONT(w)			((w)->gc.font)
+#define RTGUI_WIDGET_FLAG(w)			((w)->flag)
 
 DECLARE_CLASS_TYPE(widget);
 
@@ -79,10 +76,8 @@ struct rtgui_widget
    /* inherit from rtgui_object */
 	struct rtgui_object object;
 
-	/* the widget that contains this widget */
-	struct rtgui_widget *parent;
-	/* the window that contains this widget */
-	struct rtgui_win *toplevel;
+	/* the parent and root widget */
+	struct rtgui_widget *parent, *toplevel;
 	/* the widget children and sibling */
 	rtgui_list_t sibling;
 
@@ -99,24 +94,30 @@ struct rtgui_widget
 	/* the widget extent */
 	rtgui_rect_t extent;
 
+#ifndef RTGUI_USING_SMALL_SIZE
 	/* minimal width and height of widget */
 	rt_int16_t mini_width, mini_height;
+	rt_int16_t margin, margin_style;
+
 	/* widget align */
 	rt_int32_t align;
-	rt_uint16_t border;
-	rt_uint16_t border_style;
+#endif
+
 	/* the rect clip */
 	rtgui_region_t clip;
 
+	/* the event handler */
+	rt_bool_t (*event_handler)	(struct rtgui_widget* widget, struct rtgui_event* event);
+
 	/* call back */
-	rt_bool_t (*on_focus_in)	(struct rtgui_object* widget, struct rtgui_event* event);
-	rt_bool_t (*on_focus_out)	(struct rtgui_object* widget, struct rtgui_event* event);
+	rt_bool_t (*on_focus_in)	(struct rtgui_widget* widget, struct rtgui_event* event);
+	rt_bool_t (*on_focus_out)	(struct rtgui_widget* widget, struct rtgui_event* event);
 #ifndef RTGUI_USING_SMALL_SIZE
-	rt_bool_t (*on_draw)		(struct rtgui_object* widget, struct rtgui_event* event);
-	rt_bool_t (*on_mouseclick)	(struct rtgui_object* widget, struct rtgui_event* event);
-	rt_bool_t (*on_key)			(struct rtgui_object* widget, struct rtgui_event* event);
-	rt_bool_t (*on_size)		(struct rtgui_object* widget, struct rtgui_event* event);
-	rt_bool_t (*on_command)		(struct rtgui_object* widget, struct rtgui_event* event);
+	rt_bool_t (*on_draw)		(struct rtgui_widget* widget, struct rtgui_event* event);
+	rt_bool_t (*on_mouseclick)	(struct rtgui_widget* widget, struct rtgui_event* event);
+	rt_bool_t (*on_key)			(struct rtgui_widget* widget, struct rtgui_event* event);
+	rt_bool_t (*on_size)		(struct rtgui_widget* widget, struct rtgui_event* event);
+	rt_bool_t (*on_command)		(struct rtgui_widget* widget, struct rtgui_event* event);
 #endif
 
 	/* user private data */
@@ -124,10 +125,14 @@ struct rtgui_widget
 };
 typedef struct rtgui_widget rtgui_widget_t;
 
+rtgui_type_t *rtgui_widget_type_get(void);
 rtgui_widget_t *rtgui_widget_create(rtgui_type_t *widget_type);
 void rtgui_widget_destroy(rtgui_widget_t* widget);
 
-rt_bool_t rtgui_widget_event_handler(struct rtgui_object* object, rtgui_event_t* event);
+/* set the event handler of widget */
+void rtgui_widget_set_event_handler(rtgui_widget_t* widget, rtgui_event_handler_ptr handler);
+/* widget default event handler */
+rt_bool_t rtgui_widget_event_handler(rtgui_widget_t* widget, rtgui_event_t* event);
 
 /* focus and unfocus */
 void rtgui_widget_focus(rtgui_widget_t * widget);
@@ -146,7 +151,6 @@ void rtgui_widget_set_oncommand(rtgui_widget_t* widget, rtgui_event_handler_ptr 
 
 /* get and set rect of widget */
 void rtgui_widget_get_rect(rtgui_widget_t* widget, rtgui_rect_t *rect);
-void rtgui_widget_set_border(rtgui_widget_t* widget, rt_uint32_t style);
 void rtgui_widget_set_rect(rtgui_widget_t* widget, const rtgui_rect_t* rect);
 void rtgui_widget_set_rectangle(rtgui_widget_t* widget, int x, int y, int width, int height);
 void rtgui_widget_get_extent(rtgui_widget_t* widget, rtgui_rect_t *rect);
@@ -175,13 +179,10 @@ void rtgui_widget_move_to_logic(rtgui_widget_t* widget, int dx, int dy);
 void rtgui_widget_update_clip(rtgui_widget_t* widget);
 
 /* get the toplevel widget of widget */
-struct rtgui_win* rtgui_widget_get_toplevel(rtgui_widget_t* widget);
-rt_bool_t rtgui_widget_onupdate_toplvl(struct rtgui_object *object, struct rtgui_event *event);
+rtgui_widget_t* rtgui_widget_get_toplevel(rtgui_widget_t* widget);
 
 void rtgui_widget_show(rtgui_widget_t* widget);
-rt_bool_t rtgui_widget_onshow(struct rtgui_object *object, struct rtgui_event *event);
 void rtgui_widget_hide(rtgui_widget_t* widget);
-rt_bool_t rtgui_widget_onhide(struct rtgui_object *object, struct rtgui_event *event);
 void rtgui_widget_update(rtgui_widget_t* widget);
 
 /* get parent color */

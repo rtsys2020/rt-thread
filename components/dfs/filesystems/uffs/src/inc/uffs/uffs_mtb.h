@@ -36,10 +36,11 @@
  * \author Ricky Zheng
  */
 
-#ifndef _UFFS_MTB_H_
-#define _UFFS_MTB_H_
+#ifndef UFFS_MTB_H
+#define UFFS_MTB_H
 
 #include "uffs/uffs_types.h"
+#include "uffs/uffs_config.h"
 #include "uffs/uffs_core.h"
 #include "uffs/uffs.h"
 
@@ -49,31 +50,24 @@ extern "C"{
 
 
 typedef struct uffs_MountTableEntrySt {
-	uffs_Device *dev;		// UFFS 'device' - core internal data structure for partition
-	int start_block;		// partition start block
-	int end_block;			// partition end block ( if < 0, reserve space form the end of storage)
-	const char *mount;		// mount point
-	struct uffs_MountTableEntrySt *prev;
+	uffs_Device *dev;
+	int start_block;
+	int end_block;
+	const char *mount;
 	struct uffs_MountTableEntrySt *next;
 } uffs_MountTable;
 
-/** Register mount entry, will be put at 'unmounted' list */
-int uffs_RegisterMountTable(uffs_MountTable *mtb);
+/** initialize registered mount table */
+URET uffs_InitMountTable(void);									
 
-/** Remove mount entry from the list */
-int uffs_UnRegisterMountTable(uffs_MountTable *mtb);
+/** release registered mount table */
+URET uffs_ReleaseMountTable(void);								
 
-/** mount partition */
-int uffs_Mount(const char *mount);
+/** get registered mount table */
+uffs_MountTable * uffs_GetMountTable(void);						
 
-/** unmount parttion */
-int uffs_UnMount(const char *mount);
-
-/** get mounted entry list */
-uffs_MountTable * uffs_MtbGetMounted(void);
-
-/** get unmounted entry list */
-uffs_MountTable * uffs_MtbGetUnMounted(void);
+/** register mount table */
+int uffs_RegisterMountTable(uffs_MountTable *mtab);				
 
 /** get matched mount point from absolute path */
 int uffs_GetMatchedMountPointSize(const char *path);			

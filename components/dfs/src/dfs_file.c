@@ -66,20 +66,13 @@ int dfs_file_open(struct dfs_fd *fd, const char *path, int flags)
 	fd->size = 0;
 	fd->pos = 0;
 
-	if (!(fs->ops->flags & DFS_FS_FLAG_FULLPATH))
-	{
-		if (dfs_subdir(fs->path, fullpath) == RT_NULL)
-			fd->path = rt_strdup("/");
-		else
-			fd->path = rt_strdup(dfs_subdir(fs->path, fullpath));
-		rt_free(fullpath);
-		dfs_log(DFS_DEBUG_INFO, ("Actual file path: %s\n", fd->path));
-	}
+	if (dfs_subdir(fs->path, fullpath) == RT_NULL)
+		fd->path = rt_strdup("/");
 	else
-	{
-		fd->path = fullpath;	
-	}
-	
+		fd->path = rt_strdup(dfs_subdir(fs->path, fullpath));
+	rt_free(fullpath);
+	dfs_log(DFS_DEBUG_INFO, ("Actual file path: %s\n", fd->path));
+
 	/* specific file system open routine */
 	if (fs->ops->open == RT_NULL)
 	{
@@ -248,15 +241,10 @@ int dfs_file_unlink(const char *path)
 
 	if (fs->ops->unlink != RT_NULL)
 	{
-		if (!(fs->ops->flags & DFS_FS_FLAG_FULLPATH))
-		{
-			if (dfs_subdir(fs->path, fullpath) == RT_NULL)
-				result = fs->ops->unlink(fs, "/");
-			else
-				result = fs->ops->unlink(fs, dfs_subdir(fs->path, fullpath));
-		}
+		if (dfs_subdir(fs->path, fullpath) == RT_NULL)
+			result = fs->ops->unlink(fs, "/");
 		else
-			result = fs->ops->unlink(fs, fullpath);				
+			result = fs->ops->unlink(fs, dfs_subdir(fs->path, fullpath));
 	}
 	else result = -DFS_STATUS_ENOSYS;
 
@@ -313,7 +301,7 @@ int dfs_file_flush(struct dfs_fd *fd)
  * this function will seek the offset for specified file descriptor.
  *
  * @param fd the file descriptor.
- * @param offset the offset to be sought.
+ * @param offset the offset to be seeked.
  *
  * @return the current position after seek.
  */
@@ -392,11 +380,7 @@ int dfs_file_stat(const char *path, struct stat *buf)
 		}
 
 		/* get the real file path and get file stat */
-		if (fs->ops->flags & DFS_FS_FLAG_FULLPATH)
-			result = fs->ops->stat(fs, fullpath, buf);	 
-		else
-			result = fs->ops->stat(fs, dfs_subdir(fs->path, fullpath), buf);
-			
+		result = fs->ops->stat(fs, dfs_subdir(fs->path, fullpath), buf);
 	}
 
 	rt_free(fullpath);
@@ -447,9 +431,6 @@ int dfs_file_rename(const char *oldpath, const char *newpath)
 		}
 		else
 		{
-			if (oldfs->ops->flags & DFS_FS_FLAG_FULLPATH)
-				result = oldfs->ops->rename(oldfs, oldfullpath, newfullpath);
-			else
 				/* use sub directory to rename in file system */
 				result = oldfs->ops->rename(oldfs, dfs_subdir(oldfs->path, oldfullpath),
 					dfs_subdir(newfs->path, newfullpath));

@@ -1,7 +1,7 @@
 /*
  * File      : object.c
  * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2006 - 2012, RT-Thread Development Team
+ * COPYRIGHT (C) 2006 - 2011, RT-Thread Development Team
  *
  * The license and distribution terms for this file may be
  * found in the file LICENSE in this distribution or at
@@ -19,6 +19,8 @@
 
 #include <rtthread.h>
 #include <rthw.h>
+
+#include "kservice.h"
 
 #define _OBJ_CONTAINER_LIST_INIT(c) 	\
 	{&(rt_object_container[c].object_list), &(rt_object_container[c].object_list)}
@@ -46,10 +48,6 @@ struct rt_object_information rt_object_container[RT_Object_Class_Unknown] =
 	/* initialize object container - message queue */
 	{RT_Object_Class_MessageQueue, _OBJ_CONTAINER_LIST_INIT(RT_Object_Class_MessageQueue), sizeof(struct rt_messagequeue)},
 #endif
-#ifdef RT_USING_MEMHEAP
-	/* initialize object container - memory heap */
-	{RT_Object_Class_MemHeap, _OBJ_CONTAINER_LIST_INIT(RT_Object_Class_MemHeap), sizeof(struct rt_memheap)},
-#endif
 #ifdef RT_USING_MEMPOOL
 	/* initialize object container - memory pool */
 	{RT_Object_Class_MemPool, _OBJ_CONTAINER_LIST_INIT(RT_Object_Class_MemPool), sizeof(struct rt_mempool)},
@@ -76,7 +74,6 @@ void (*rt_object_put_hook)(struct rt_object *object);
 /**
  * @addtogroup Hook
  */
-
 /*@{*/
 
 /**
@@ -167,7 +164,6 @@ void rt_system_object_init(void)
 /**
  * @addtogroup KernelObject
  */
-
 /*@{*/
 
 /**
@@ -180,7 +176,6 @@ struct rt_object_information *rt_object_get_information(enum rt_object_class_typ
 {
 	return &rt_object_container[type];
 }
-RTM_EXPORT(rt_object_get_information);
 
 /**
  * This function will initialize an object and add it to object system management.
@@ -357,17 +352,16 @@ void rt_object_delete(rt_object_t object)
  *
  * @param object the specified object to be judged.
  *
- * @return RT_TRUE if a system object, RT_FALSE for others.
+ * @return RT_EOK if a system object, RT_ERROR for others.
  */
-rt_bool_t rt_object_is_systemobject(rt_object_t object)
+rt_err_t rt_object_is_systemobject(rt_object_t object)
 {
 	/* object check */
 	RT_ASSERT(object != RT_NULL);
 
-	if (object->type & RT_Object_Class_Static)
-		return RT_TRUE;
+	if (object->type & RT_Object_Class_Static) return RT_EOK;
 
-	return RT_FALSE;
+	return -RT_ERROR;
 }
 
 /**
@@ -410,7 +404,7 @@ rt_object_t rt_object_find(const char *name, rt_uint8_t type)
 			/* leave critical */
 			rt_exit_critical();
 
-			return object;
+			return (rt_object_t)object;
 		}
 	}
 
@@ -419,5 +413,4 @@ rt_object_t rt_object_find(const char *name, rt_uint8_t type)
 
 	return RT_NULL;
 }
-
 /*@}*/

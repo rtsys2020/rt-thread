@@ -1,7 +1,7 @@
 /*
  * File      : dfs_posix.c
  * This file is part of Device File System in RT-Thread RTOS
- * COPYRIGHT (C) 2004-2012, RT-Thread Development Team
+ * COPYRIGHT (C) 2004-2011, RT-Thread Development Team
  *
  * The license and distribution terms for this file may be
  * found in the file LICENSE in this distribution or at
@@ -42,7 +42,7 @@ int open(const char *file, int flags, int mode)
 		rt_set_errno(-DFS_STATUS_ENOMEM);
 		return -1;
 	}
-	d = fd_get(fd);
+	d  = fd_get(fd);
 
 	result = dfs_file_open(d, file, flags);
 	if (result < 0)
@@ -58,10 +58,8 @@ int open(const char *file, int flags, int mode)
 
 	/* release the ref-count of fd */
 	fd_put(d);
-
 	return fd;
 }
-RTM_EXPORT(open);
 
 /**
  * this function is a POSIX compliant version, which will close the open
@@ -89,15 +87,12 @@ int close(int fd)
 	if (result < 0)
 	{
 		rt_set_errno(result);
-
 		return -1;
 	}
 
 	fd_put(d);
-
 	return 0;
 }
-RTM_EXPORT(close);
 
 /**
  * this function is a POSIX compliant version, which will read specified data buffer 
@@ -115,7 +110,7 @@ int read(int fd, void *buf, size_t len)
 	struct dfs_fd *d;
 
 	/* get the fd */
-	d = fd_get(fd);
+	d  = fd_get(fd);
 	if (d == RT_NULL)
 	{
 		rt_set_errno(-DFS_STATUS_EBADF);
@@ -133,10 +128,8 @@ int read(int fd, void *buf, size_t len)
 
 	/* release the ref-count of fd */
 	fd_put(d);
-
 	return result;
 }
-RTM_EXPORT(read);
 
 /**
  * this function is a POSIX compliant version, which will write specified data buffer
@@ -154,11 +147,10 @@ int write(int fd, const void *buf, size_t len)
 	struct dfs_fd *d;
 
 	/* get the fd */
-	d = fd_get(fd);
+	d  = fd_get(fd);
 	if (d == RT_NULL)
 	{
 		rt_set_errno(-DFS_STATUS_EBADF);
-
 		return -1;
 	}
 
@@ -173,10 +165,8 @@ int write(int fd, const void *buf, size_t len)
 
 	/* release the ref-count of fd */
 	fd_put(d);
-
 	return result;
 }
-RTM_EXPORT(write);
 
 /**
  * this function is a POSIX compliant version, which will seek the offset for an
@@ -216,12 +206,12 @@ off_t lseek(int fd, off_t offset, int whence)
 	default:
 		rt_set_errno(-DFS_STATUS_EINVAL);
 		return -1;
+
 	}
 
 	if (offset < 0)
 	{
 		rt_set_errno(-DFS_STATUS_EINVAL);
-
 		return -1;
 	}
 	result = dfs_file_lseek(d, offset);
@@ -229,16 +219,13 @@ off_t lseek(int fd, off_t offset, int whence)
 	{
 		fd_put(d);
 		rt_set_errno(result);
-
 		return -1;
 	}
 
 	/* release the ref-count of fd */
 	fd_put(d);
-
 	return offset;
 }
-RTM_EXPORT(lseek);
 
 /**
  * this function is a POSIX compliant version, which will rename old file name to
@@ -259,13 +246,10 @@ int rename(const char *old, const char *new)
 	if (result < 0)
 	{
 		rt_set_errno(result);
-
 		return -1;
 	}
-
 	return 0;
 }
-RTM_EXPORT(rename);
 
 /**
  * this function is a POSIX compliant version, which will unlink (remove) a 
@@ -283,13 +267,10 @@ int unlink(const char *pathname)
 	if (result < 0)
 	{
 		rt_set_errno(result);
-
 		return -1;
 	}
-
 	return 0;
 }
-RTM_EXPORT(unlink);
 
 /**
  * this function is a POSIX compliant version, which will get file information.
@@ -307,13 +288,10 @@ int stat(const char *file, struct stat *buf)
 	if (result < 0)
 	{
 		rt_set_errno(result);
-
 		return -1;
 	}
-
 	return result;
 }
-RTM_EXPORT(stat);
 
 /**
  * this function is a POSIX compliant version, which will get file status.
@@ -330,7 +308,6 @@ int fstat(int fildes, struct stat *buf)
 	if (d == RT_NULL)
 	{
 		rt_set_errno(-DFS_STATUS_EBADF);
-
 		return -1;
 	}
 
@@ -353,7 +330,6 @@ int fstat(int fildes, struct stat *buf)
 
 	return DFS_STATUS_OK;
 }
-RTM_EXPORT(fstat);
 
 /**
  * this function is a POSIX compliant version, which will return the 
@@ -372,13 +348,11 @@ int statfs(const char *path, struct statfs *buf)
 	if (result < 0)
 	{
 		rt_set_errno(result);
-
 		return -1;
 	}
 
 	return result;
 }
-RTM_EXPORT(statfs);
 
 /**
  * this function is a POSIX compliant version, which will make a directory
@@ -398,7 +372,6 @@ int mkdir(const char *path, mode_t mode)
 	if (fd == -1)
 	{
 		rt_set_errno(-DFS_STATUS_ENOMEM);
-
 		return -1;
 	}
 
@@ -410,17 +383,13 @@ int mkdir(const char *path, mode_t mode)
 	{
 		fd_put(d);
 		rt_set_errno(result);
-
 		return -1;
 	}
 
 	dfs_file_close(d);
 	fd_put(d);
-
 	return 0;
 }
-RTM_EXPORT(mkdir);
-
 #ifdef RT_USING_FINSH
 #include <finsh.h>
 FINSH_FUNCTION_EXPORT(mkdir, create a directory);
@@ -431,7 +400,7 @@ FINSH_FUNCTION_EXPORT(mkdir, create a directory);
  *
  * @param pathname the path name to be removed.
  * 
- * @return 0 on successful, others on failed.
+ * @return 0 on sucessfull, others on failed.
  */
 int rmdir(const char *pathname)
 {
@@ -441,13 +410,11 @@ int rmdir(const char *pathname)
 	if (result < 0)
 	{
 		rt_set_errno(result);
-
 		return -1;
 	}
 
 	return 0;
 }
-RTM_EXPORT(rmdir);
 
 /**
  * this function is a POSIX compliant version, which will open a directory.
@@ -469,7 +436,6 @@ DIR *opendir(const char *name)
 	if (fd == -1)
 	{
 		rt_set_errno(-DFS_STATUS_ENOMEM);
-
 		return RT_NULL;
 	}
 	d = fd_get(fd);
@@ -486,11 +452,10 @@ DIR *opendir(const char *name)
 		}
 		else
 		{
-			rt_memset(t, 0, sizeof(DIR));
-			t->fd = fd;
+		    rt_memset(t, 0, sizeof(DIR));
+		    t->fd = fd;
 		}
 		fd_put(d);
-
 		return t;
 	}
 
@@ -501,7 +466,6 @@ DIR *opendir(const char *name)
 
 	return RT_NULL;
 }
-RTM_EXPORT(opendir);
 
 /**
  * this function is a POSIX compliant version, which will return a pointer 
@@ -521,7 +485,6 @@ struct dirent *readdir(DIR *d)
 	if (fd == RT_NULL)
 	{
 		rt_set_errno(-DFS_STATUS_EBADF);
-
 		return RT_NULL;
 	}
 
@@ -542,10 +505,8 @@ struct dirent *readdir(DIR *d)
 	}
 
 	fd_put(fd);
-
 	return (struct dirent *)(d->buf+d->cur);
 }
-RTM_EXPORT(readdir);
 
 /**
  * this function is a POSIX compliant version, which will return current 
@@ -564,7 +525,6 @@ long telldir(DIR *d)
 	if (fd == RT_NULL)
 	{
 		rt_set_errno(-DFS_STATUS_EBADF);
-
 		return 0;
 	}
 
@@ -573,7 +533,6 @@ long telldir(DIR *d)
 
 	return result;
 }
-RTM_EXPORT(telldir);
 
 /**
  * this function is a POSIX compliant version, which will set position of 
@@ -590,7 +549,6 @@ void seekdir(DIR *d, off_t offset)
 	if (fd == RT_NULL)
 	{
 		rt_set_errno(-DFS_STATUS_EBADF);
-
 		return ;
 	}
 
@@ -599,7 +557,6 @@ void seekdir(DIR *d, off_t offset)
 		d->num = d->cur = 0;
 	fd_put(fd);
 }
-RTM_EXPORT(seekdir);
 
 /**
  * this function is a POSIX compliant version, which will reset directory stream.
@@ -614,7 +571,6 @@ void rewinddir(DIR *d)
 	if (fd == RT_NULL)
 	{
 		rt_set_errno(-DFS_STATUS_EBADF);
-
 		return ;
 	}
 
@@ -623,7 +579,6 @@ void rewinddir(DIR *d)
 		d->num = d->cur = 0;
 	fd_put(fd);
 }
-RTM_EXPORT(rewinddir);
 
 /**
  * this function is a POSIX compliant version, which will close a directory 
@@ -642,7 +597,6 @@ int closedir(DIR *d)
 	if (fd == RT_NULL)
 	{
 		rt_set_errno(-DFS_STATUS_EBADF);
-
 		return -1;
 	}
 
@@ -655,13 +609,10 @@ int closedir(DIR *d)
 	if (result < 0)
 	{
 		rt_set_errno(result);
-
 		return -1;
 	}
-	else
-		return 0;
+	else return 0;
 }
-RTM_EXPORT(closedir);
 
 #ifdef DFS_USING_WORKDIR
 /**
@@ -681,14 +632,12 @@ int chdir(const char *path)
 		dfs_lock();
 		rt_kprintf("%s\n", working_directory);
 		dfs_unlock();
-
 		return 0;
 	}
 
 	if (rt_strlen(path) > DFS_PATH_MAX)
 	{
 		rt_set_errno(-DFS_STATUS_ENOTDIR);
-
 		return -1;
 	}
 
@@ -696,7 +645,6 @@ int chdir(const char *path)
 	if (fullpath == RT_NULL)
 	{
 		rt_set_errno(-DFS_STATUS_ENOTDIR);
-
 		return -1; /* build path failed */
 	}
 
@@ -707,7 +655,6 @@ int chdir(const char *path)
 		rt_free(fullpath);
 		/* this is a not exist directory */
 		dfs_unlock();
-
 		return -1;
 	}
 
@@ -722,8 +669,6 @@ int chdir(const char *path)
 
 	return 0;
 }
-RTM_EXPORT(chdir);
-
 #ifdef RT_USING_FINSH
 FINSH_FUNCTION_EXPORT_ALIAS(chdir, cd, change current working directory);
 #endif
@@ -747,9 +692,7 @@ char *getcwd(char *buf, size_t size)
 #else
 	rt_kprintf("WARNING: not support working directory\n");
 #endif
-
 	return buf;
 }
-RTM_EXPORT(getcwd);
 
 /* @} */

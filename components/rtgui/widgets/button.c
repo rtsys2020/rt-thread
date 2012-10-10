@@ -14,16 +14,14 @@
 #include <rtgui/dc.h>
 #include <rtgui/rtgui_theme.h>
 #include <rtgui/widgets/button.h>
-#include <rtgui/widgets/window.h>
-
-static rt_bool_t rtgui_button_onunfocus(struct rtgui_object* object, rtgui_event_t* event);
+#include <rtgui/widgets/toplevel.h>
 
 static void _rtgui_button_constructor(rtgui_button_t *button)
 {
 	/* init widget and set event handler */
 	RTGUI_WIDGET(button)->flag |= RTGUI_WIDGET_FLAG_FOCUSABLE;
-	rtgui_object_set_event_handler(RTGUI_OBJECT(button), rtgui_button_event_handler);
-	rtgui_widget_set_onunfocus(RTGUI_WIDGET(button), rtgui_button_onunfocus);
+	rtgui_widget_set_event_handler(RTGUI_WIDGET(button), rtgui_button_event_handler);
+
 	/* un-press button */
 	button->flag = 0;
 
@@ -33,9 +31,9 @@ static void _rtgui_button_constructor(rtgui_button_t *button)
 	button->on_button = RT_NULL;
 
 	/* set gc */
-	RTGUI_WIDGET_FOREGROUND(button) = default_foreground;
-	RTGUI_WIDGET_BACKGROUND(button) = RTGUI_RGB(212, 208, 200);
-	RTGUI_WIDGET_TEXTALIGN(button) = RTGUI_ALIGN_CENTER_HORIZONTAL | RTGUI_ALIGN_CENTER_VERTICAL;
+	RTGUI_WIDGET_FOREGROUND(RTGUI_WIDGET(button)) = default_foreground;
+	RTGUI_WIDGET_BACKGROUND(RTGUI_WIDGET(button)) = RTGUI_RGB(212, 208, 200);
+	RTGUI_WIDGET_TEXTALIGN(RTGUI_WIDGET(button)) = RTGUI_ALIGN_CENTER_HORIZONTAL | RTGUI_ALIGN_CENTER_VERTICAL;
 }
 
 static void _rtgui_button_destructor(rtgui_button_t *button)
@@ -59,16 +57,13 @@ DEFINE_CLASS_TYPE(button, "button",
 	_rtgui_button_destructor,
 	sizeof(struct rtgui_button));
 
-rt_bool_t rtgui_button_event_handler(struct rtgui_object* object, struct rtgui_event* event)
+rt_bool_t rtgui_button_event_handler(struct rtgui_widget* widget, struct rtgui_event* event)
 {
-	struct rtgui_widget *widget;
-	struct rtgui_button *btn;
+	struct rtgui_button* btn;
 
-	RT_ASSERT(object != RT_NULL);
-	RT_ASSERT(event != RT_NULL);
+	RT_ASSERT(widget != RT_NULL);
 
-	widget = RTGUI_WIDGET(object);
-	btn = RTGUI_BUTTON(widget);
+	btn = (struct rtgui_button*) widget;
 	switch (event->type)
 	{
 	case RTGUI_EVENT_PAINT:
@@ -97,7 +92,7 @@ rt_bool_t rtgui_button_event_handler(struct rtgui_object* object, struct rtgui_e
 				if ((btn->flag & RTGUI_BUTTON_FLAG_PRESS) && (btn->on_button != RT_NULL))
 				{
 					/* call on button handler */
-					btn->on_button(RTGUI_OBJECT(widget), event);
+					btn->on_button(widget, event);
 				}
 			}
 		}
@@ -139,14 +134,14 @@ rt_bool_t rtgui_button_event_handler(struct rtgui_object* object, struct rtgui_e
 					if (btn->on_button != RT_NULL)
 					{
 						/* call on button handler */
-						btn->on_button(RTGUI_OBJECT(widget), event);
+						btn->on_button(widget, event);
 					}
 
 #ifndef RTGUI_USING_SMALL_SIZE
 					/* invokes call back */
 					if (widget->on_mouseclick != RT_NULL &&
 						emouse->button & RTGUI_MOUSE_BUTTON_UP)
-						return widget->on_mouseclick(RTGUI_OBJECT(widget), event);
+						return widget->on_mouseclick(widget, event);
 #endif
 				}
 			}
@@ -155,10 +150,10 @@ rt_bool_t rtgui_button_event_handler(struct rtgui_object* object, struct rtgui_e
 				if (emouse->button & RTGUI_MOUSE_BUTTON_LEFT)
 				{
 					/* set the last mouse event handled widget */
-					struct rtgui_win* win;
+					rtgui_toplevel_t* toplevel;
 
-					win = RTGUI_WIN(RTGUI_WIDGET(btn)->toplevel);
-					win->last_mevent_widget = RTGUI_WIDGET(btn);
+					toplevel = RTGUI_TOPLEVEL(RTGUI_WIDGET(btn)->toplevel);
+					toplevel->last_mevent_widget = RTGUI_WIDGET(btn);
 
 					/* it's a normal button */
 					if (emouse->button & RTGUI_MOUSE_BUTTON_DOWN)
@@ -177,13 +172,13 @@ rt_bool_t rtgui_button_event_handler(struct rtgui_object* object, struct rtgui_e
 					/* invokes call back */
 					if (widget->on_mouseclick != RT_NULL &&
 						emouse->button & RTGUI_MOUSE_BUTTON_UP)
-						return widget->on_mouseclick(RTGUI_OBJECT(widget), event);
+						return widget->on_mouseclick(widget, event);
 #endif
 
 					if (!(btn->flag & RTGUI_BUTTON_FLAG_PRESS) && (btn->on_button != RT_NULL))
 					{
 						/* call on button handler */
-						btn->on_button(RTGUI_OBJECT(widget), event);
+						btn->on_button(widget, event);
 					}
 				}
 
@@ -191,13 +186,10 @@ rt_bool_t rtgui_button_event_handler(struct rtgui_object* object, struct rtgui_e
 
 			return RT_TRUE;
 		}
-	default:
-		return rtgui_widget_event_handler(object, event);
 	}
 
 	return RT_FALSE;
 }
-RTM_EXPORT(rtgui_button_event_handler);
 
 rtgui_button_t* rtgui_button_create(const char* text)
 {
@@ -218,7 +210,6 @@ rtgui_button_t* rtgui_button_create(const char* text)
 
     return btn;
 }
-RTM_EXPORT(rtgui_button_create);
 
 rtgui_button_t* rtgui_pushbutton_create(const char* text)
 {
@@ -229,13 +220,11 @@ rtgui_button_t* rtgui_pushbutton_create(const char* text)
 
 	return btn;
 }
-RTM_EXPORT(rtgui_pushbutton_create);
 
 void rtgui_button_destroy(rtgui_button_t* btn)
 {
 	rtgui_widget_destroy(RTGUI_WIDGET(btn));
 }
-RTM_EXPORT(rtgui_button_destroy);
 
 void rtgui_button_set_pressed_image(rtgui_button_t* btn, rtgui_image_t* image)
 {
@@ -243,7 +232,6 @@ void rtgui_button_set_pressed_image(rtgui_button_t* btn, rtgui_image_t* image)
 
 	btn->pressed_image = image;
 }
-RTM_EXPORT(rtgui_button_set_pressed_image);
 
 void rtgui_button_set_unpressed_image(rtgui_button_t* btn, rtgui_image_t* image)
 {
@@ -251,7 +239,6 @@ void rtgui_button_set_unpressed_image(rtgui_button_t* btn, rtgui_image_t* image)
 
 	btn->unpressed_image = image;
 }
-RTM_EXPORT(rtgui_button_set_unpressed_image);
 
 void rtgui_button_set_onbutton(rtgui_button_t* btn, rtgui_onbutton_func_t func)
 {
@@ -259,33 +246,4 @@ void rtgui_button_set_onbutton(rtgui_button_t* btn, rtgui_onbutton_func_t func)
 
 	btn->on_button = func;
 }
-RTM_EXPORT(rtgui_button_set_onbutton);
 
-static rt_bool_t rtgui_button_onunfocus(struct rtgui_object* object, rtgui_event_t* event)
-{
-	rtgui_rect_t rect;
-	rtgui_widget_t *widget;
-	struct rtgui_dc *dc;
-
-	RT_ASSERT(object);
-	widget = RTGUI_WIDGET(object);
-
-	dc = rtgui_dc_begin_drawing(widget);
-	if(dc == RT_NULL) return RT_FALSE;
-	
-	rtgui_widget_get_rect(widget, &rect);
-
-	if(!RTGUI_WIDGET_IS_FOCUSED(widget))
-	{
-		/* only clear focus rect */
-		rtgui_color_t color;
-		rtgui_rect_inflate(&rect, -2);
-		color = RTGUI_DC_FC(dc);
-		RTGUI_DC_FC(dc) = RTGUI_DC_BC(dc);
-		rtgui_dc_draw_focus_rect(dc, &rect);
-		RTGUI_DC_FC(dc) = color;
-	}
-
-	rtgui_dc_end_drawing(dc);
-	return RT_TRUE;
-}

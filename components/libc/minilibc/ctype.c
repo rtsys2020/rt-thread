@@ -31,23 +31,7 @@ int isalpha(int ch)
 
 int isdigit (int ch)
 {
-	return (unsigned int)(ch - '0') < 10u;
-}
-
-int isspace(int ch)
-{
-	switch(ch)
-	{
-	case ' ':
-	case '\n':
-	case '\f':
-	case '\r':
-	case '\t':
-	case '\v':
-		return 1;
-	default:
-		return 0; 
-	}    
+    return (unsigned int)(ch - '0') < 10u;
 }
 
 #endif

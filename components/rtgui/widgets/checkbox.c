@@ -6,17 +6,17 @@ static void _rtgui_checkbox_constructor(rtgui_checkbox_t *box)
 {
 	/* init widget and set event handler */
 	RTGUI_WIDGET(box)->flag |= RTGUI_WIDGET_FLAG_FOCUSABLE;
-	rtgui_object_set_event_handler(RTGUI_OBJECT(box), rtgui_checkbox_event_handler);
+	rtgui_widget_set_event_handler(RTGUI_WIDGET(box), rtgui_checkbox_event_handler);
 
 	/* set status */
 	box->status_down = RTGUI_CHECKBOX_STATUS_UNCHECKED;
 	box->on_button = RT_NULL;
 
 	/* set default gc */
-	RTGUI_WIDGET_TEXTALIGN(box) = RTGUI_ALIGN_LEFT | RTGUI_ALIGN_CENTER_VERTICAL;
+	RTGUI_WIDGET_TEXTALIGN(RTGUI_WIDGET(box)) = RTGUI_ALIGN_LEFT | RTGUI_ALIGN_CENTER_VERTICAL;
 }
 
-DEFINE_CLASS_TYPE(checkbox, "checkbox",
+DEFINE_CLASS_TYPE(checkbox, "checkbox", 
 	RTGUI_LABEL_TYPE,
 	_rtgui_checkbox_constructor,
 	RT_NULL,
@@ -29,13 +29,9 @@ void rtgui_checkbox_set_onbutton(rtgui_checkbox_t* checkbox, rtgui_onbutton_func
 	checkbox->on_button = func;
 }
 
-rt_bool_t rtgui_checkbox_event_handler(struct rtgui_object* object, struct rtgui_event* event)
+rt_bool_t rtgui_checkbox_event_handler(struct rtgui_widget* widget, struct rtgui_event* event)
 {
-	struct rtgui_checkbox *box;
-
-	RTGUI_WIDGET_EVENT_HANDLER_PREPARE
-
-	box = RTGUI_CHECKBOX(object);
+	struct rtgui_checkbox* box = (struct rtgui_checkbox*)widget;
 
 	switch (event->type)
 	{
@@ -43,7 +39,7 @@ rt_bool_t rtgui_checkbox_event_handler(struct rtgui_object* object, struct rtgui
 #ifndef RTGUI_USING_SMALL_SIZE
 		if (widget->on_draw != RT_NULL)
 		{
-			return widget->on_draw(RTGUI_OBJECT(widget), event);
+			return widget->on_draw(widget, event);
 		}
 		else
 #endif
@@ -80,20 +76,18 @@ rt_bool_t rtgui_checkbox_event_handler(struct rtgui_object* object, struct rtgui
 				/* call user callback */
 				if (widget->on_mouseclick != RT_NULL)
 				{
-					return widget->on_mouseclick(RTGUI_OBJECT(widget), event);
+					return widget->on_mouseclick(widget, event);
 				}
 #endif
 				if (box->on_button != RT_NULL)
 				{
-					box->on_button(RTGUI_OBJECT(widget), event);
+					box->on_button(widget, event);
 					return RT_TRUE;
 				}
 			}
 
 			return RT_TRUE;
 		}
-	default:
-		return rtgui_widget_event_handler(object, event);
 	}
 
 	return RT_FALSE;

@@ -1,32 +1,15 @@
-import os
-
 # toolchains options
 ARCH     = 'arm'
 CPU      = 'sep4020'
-TextBase = '0x30100000'
 
 CROSS_TOOL 	= 'keil'
 
-if os.getenv('RTT_CC'):
-	CROSS_TOOL = os.getenv('RTT_CC')
-
 if  CROSS_TOOL == 'gcc':
-    print '================ERROR============================'
-    print 'Not support gcc yet!'
-    print '================================================='
-    exit(0)
+	PLATFORM 	= 'gcc'
+	EXEC_PATH 	= 'E:/Program Files/CodeSourcery/Sourcery G++ Lite/bin'
 elif CROSS_TOOL == 'keil':
 	PLATFORM 	= 'armcc'
 	EXEC_PATH 	= 'c:/Keil'
-elif CROSS_TOOL == 'iar':
-    print '================ERROR============================'
-    print 'Not support iar yet!'
-    print '================================================='
-    exit(0)
-
-if os.getenv('RTT_EXEC_PATH'):
-	EXEC_PATH = os.getenv('RTT_EXEC_PATH')
-
 BUILD = 'debug'
 
 if PLATFORM == 'gcc':
@@ -44,7 +27,7 @@ if PLATFORM == 'gcc':
     DEVICE = ' -mcpu=arm720t'
     CFLAGS = DEVICE
     AFLAGS = ' -c' + DEVICE + ' -x assembler-with-cpp' + ' -DTEXT_BASE=' + TextBase
-    LFLAGS = DEVICE + ' -Wl,--gc-sections,-Map=rtthread_mini4020.map,-cref,-u,_start -T mini4020_rom.ld' + ' -Ttext ' + TextBase
+    LFLAGS = DEVICE + ' -Wl,--gc-sections,-Map=rtthread_mini4020.map,-cref,-u,_start -T mini4020_ram.ld' + ' -Ttext ' + TextBase
 
     CPATH = ''
     LPATH = ''
@@ -82,3 +65,14 @@ elif PLATFORM == 'armcc':
         CFLAGS += ' -O2'
 
     POST_ACTION = 'fromelf --bin $TARGET --output rtthread.bin \nfromelf -z $TARGET'
+
+elif PLATFORM == 'iar':
+    # toolchains
+    CC = 'armcc'
+    AS = 'armasm'
+    AR = 'armar'
+    LINK = 'armlink'
+
+    CFLAGS = ''
+    AFLAGS = ''
+    LFLAGS = ''

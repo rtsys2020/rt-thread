@@ -12,7 +12,6 @@
  * 2008-02-22     QiuYi        The first version.
  * 2011-10-08     Bernard      fixed the block size in statfs.
  * 2011-11-23     Bernard      fixed the rename issue.
- * 2012-07-26     aozima       implement ff_memalloc and ff_memfree.
  */
  
 #include <rtthread.h>
@@ -103,26 +102,7 @@ int dfs_elm_mount(struct dfs_filesystem *fs, unsigned long rwflag, const void *d
 	/* mount fatfs, always 0 logic driver */
 	result = f_mount(index, fat);
 	if (result == FR_OK)
-	{
-		char drive[8];
-		DIR * dir;
-
-		rt_snprintf(drive, sizeof(drive), "%d:/", index);
-		dir = (DIR *)rt_malloc(sizeof(DIR));
-		if (dir == RT_NULL)
-			return -DFS_STATUS_ENOMEM;
-
-		/* open the root directory to test whether the fatfs is valid */
-		result = f_opendir(dir, drive);
-		if (result != FR_OK)
-		{
-			rt_free(dir);
-			return elm_result_to_dfs(result);
-		}
-		rt_free(dir);
-
 		fs->data = fat;
-	}
 	else
 	{
 		rt_free(fat);
@@ -309,9 +289,6 @@ int dfs_elm_open(struct dfs_fd *file)
 		fd = (FIL *)rt_malloc(sizeof(FIL));
 		if (fd == RT_NULL)
 		{
-#if _VOLUMES > 1
-			rt_free(drivers_fn);
-#endif
 			return -DFS_STATUS_ENOMEM;
 		}
 
@@ -670,7 +647,6 @@ int dfs_elm_stat(struct dfs_filesystem *fs, const char *path, struct stat *st)
 static const struct dfs_filesystem_operation dfs_elm =
 {
 	"elm",
-	DFS_FS_FLAG_DEFAULT,
 	dfs_elm_mount,
 	dfs_elm_unmount,
 	dfs_elm_mkfs,
@@ -781,10 +757,6 @@ DRESULT disk_ioctl(BYTE drv, BYTE ctrl, void *buff)
 
 		*(DWORD *)buff = geometry.block_size/geometry.bytes_per_sector;
 	}
-	else if (ctrl == CTRL_SYNC)
-	{
-		rt_device_control(device, RT_DEVICE_CTRL_BLK_SYNC, RT_NULL);
-	}
 
 	return RES_OK;
 }
@@ -832,19 +804,3 @@ void ff_rel_grant(_SYNC_t m)
 }
 
 #endif
-
-/* Memory functions */
-#if _USE_LFN == 3
-/* Allocate memory block */
-void* ff_memalloc (UINT size)
-{
-    return rt_malloc(size);
-}
-
-/* Free memory block */
-void ff_memfree (void* mem)
-{
-    rt_free(mem);
-}
-#endif /* _USE_LFN == 3 */
-
