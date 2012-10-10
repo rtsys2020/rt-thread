@@ -1,7 +1,7 @@
 /*
  * File      : kservice.c
  * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2006 - 2012, RT-Thread Development Team
+ * COPYRIGHT (C) 2006 - 2011, RT-Thread Development Team
  *
  * The license and distribution terms for this file may be
  * found in the file LICENSE in this distribution or at
@@ -15,19 +15,14 @@
  * 2010-03-17     Bernard      remove rt_strlcpy function
  *                             fix gcc compiling issue.
  * 2010-04-15     Bernard      remove weak definition on ICCM16C compiler
- * 2012-07-18     Arda         add the alignment display for signed integer
  */
 
 #include <rtthread.h>
 #include <rthw.h>
 
-/* use precision */
-#define RT_PRINTF_PRECISION
-
 /**
  * @addtogroup KernelService
  */
-
 /*@{*/
 
 /* global errno in RT-Thread */
@@ -53,12 +48,10 @@ rt_err_t rt_get_errno(void)
 	}
 
 	tid = rt_thread_self();
-	if (tid == RT_NULL)
-		return _errno;
+	if (tid == RT_NULL) return _errno;
 
 	return tid->error;
 }
-RTM_EXPORT(rt_get_errno);
 
 /*
  * This function will set errno
@@ -73,21 +66,14 @@ void rt_set_errno(rt_err_t error)
 	{
 		/* it's in interrupt context */
 		_errno = error;
-
 		return;
 	}
 
 	tid = rt_thread_self();
-	if (tid == RT_NULL)
-	{
-		_errno = error;
-		
-		return;
-	}
+	if (tid == RT_NULL) { _errno = error; return; }
 
 	tid->error = error;
 }
-RTM_EXPORT(rt_set_errno);
 
 /**
  * This function returns errno.
@@ -98,16 +84,13 @@ int *_rt_errno(void)
 {
 	rt_thread_t tid;
 	
-	if (rt_interrupt_get_nest() != 0)
-		return (int *)&_errno;
+	if (rt_interrupt_get_nest() != 0) return (int *)&_errno;
 
 	tid = rt_thread_self();
-	if (tid != RT_NULL)
-		return (int *)&(tid->error);
+	if (tid != RT_NULL) return (int *)&(tid->error);
 
 	return (int *)&_errno;
 }
-RTM_EXPORT(_rt_errno);
 
 /**
  * This function will set the content of memory to specified value
@@ -117,6 +100,7 @@ RTM_EXPORT(_rt_errno);
  * @param count the copied length
  *
  * @return the address of source memory
+ *
  */
 void *rt_memset(void *s, int c, rt_ubase_t count)
 {
@@ -164,7 +148,7 @@ void *rt_memset(void *s, int c, rt_ubase_t count)
 			*aligned_addr++ = buffer;
 			*aligned_addr++ = buffer;
 			*aligned_addr++ = buffer;
-			count -= 4 * LBLOCKSIZE;
+			count -= 4*LBLOCKSIZE;
 		}
 
 		while (count >= LBLOCKSIZE)
@@ -189,7 +173,6 @@ void *rt_memset(void *s, int c, rt_ubase_t count)
 #undef TOO_SMALL
 #endif
 }
-RTM_EXPORT(rt_memset);
 
 /**
  * This function will copy memory content from source address to destination
@@ -200,6 +183,7 @@ RTM_EXPORT(rt_memset);
  * @param count the copied length
  *
  * @return the address of destination memory
+ *
  */
 void *rt_memcpy(void *dst, const void *src, rt_ubase_t count)
 {
@@ -263,7 +247,6 @@ void *rt_memcpy(void *dst, const void *src, rt_ubase_t count)
 #undef TOO_SMALL
 #endif
 }
-RTM_EXPORT(rt_memcpy);
 
 /**
  * This function will move memory content from source address to destination
@@ -274,6 +257,7 @@ RTM_EXPORT(rt_memcpy);
  * @param n the copied length
  *
  * @return the address of destination memory
+ *
  */
 void *rt_memmove(void *dest, const void *src, rt_ubase_t n)
 {
@@ -295,7 +279,6 @@ void *rt_memmove(void *dest, const void *src, rt_ubase_t n)
 
 	return dest;
 }
-RTM_EXPORT(rt_memmove);
 
 /**
  * This function will compare two areas of memory
@@ -314,10 +297,8 @@ rt_int32_t rt_memcmp(const void *cs, const void *ct, rt_ubase_t count)
 	for (su1 = cs, su2 = ct; 0 < count; ++su1, ++su2, count--)
 		if ((res = *su1 - *su2) != 0)
 			break;
-
 	return res;
 }
-RTM_EXPORT(rt_memcmp);
 
 /**
  * This function will return the first occurrence of a string.
@@ -342,10 +323,8 @@ char *rt_strstr(const char *s1, const char *s2)
 			return (char *)s1;
 		s1 ++;
 	}
-
 	return RT_NULL;
 }
-RTM_EXPORT(rt_strstr);
 
 /**
  * This function will compare two strings while ignoring differences in case
@@ -372,7 +351,6 @@ rt_uint32_t rt_strcasecmp(const char *a, const char *b)
 
 	return ca - cb;
 }
-RTM_EXPORT(rt_strcasecmp);
 
 /**
  * This function will copy string no more than n bytes.
@@ -401,10 +379,8 @@ char *rt_strncpy(char *dst, const char *src, rt_ubase_t n)
 			}
 		} while (--n != 0);
 	}
-
 	return (dst);
 }
-RTM_EXPORT(rt_strncpy);
 
 /**
  * This function will compare two strings with specified maximum length
@@ -428,7 +404,6 @@ rt_ubase_t rt_strncmp(const char *cs, const char *ct, rt_ubase_t count)
 
 	return __res;
 }
-RTM_EXPORT(rt_strncmp);
 
 /**
  * This function will compare two strings without specified length
@@ -442,10 +417,8 @@ rt_ubase_t rt_strcmp(const char *cs, const char *ct)
 {
 	while (*cs && *cs == *ct)
 		cs++, ct++;
-
 	return (*cs - *ct);
 }
-RTM_EXPORT(rt_strcmp);
 
 /**
  * This function will return the length of a string, which terminate will
@@ -464,7 +437,6 @@ rt_ubase_t rt_strlen(const char *s)
 
 	return sc - s;
 }
-RTM_EXPORT(rt_strlen);
 
 #ifdef RT_USING_HEAP
 /**
@@ -479,14 +451,11 @@ char *rt_strdup(const char *s)
 	rt_size_t len = rt_strlen(s) + 1;
 	char *tmp = (char *)rt_malloc(len);
 
-	if (!tmp)
-		return RT_NULL;
+	if (!tmp) return RT_NULL;
 
 	rt_memcpy(tmp, s, len);
-
 	return tmp;
 }
-RTM_EXPORT(rt_strdup);
 #endif
 
 /**
@@ -497,9 +466,8 @@ void rt_show_version(void)
 	rt_kprintf("\n \\ | /\n");
 	rt_kprintf("- RT -     Thread Operating System\n");
 	rt_kprintf(" / | \\     %d.%d.%d build %s\n", RT_VERSION, RT_SUBVERSION, RT_REVISION, __DATE__);
-	rt_kprintf(" 2006 - 2012 Copyright by rt-thread team\n");
+	rt_kprintf(" 2006 - 2011 Copyright by rt-thread team\n");
 }
-RTM_EXPORT(rt_show_version);
 
 /* private function */
 #define isdigit(c)  ((unsigned)((c) - '0') < 10)
@@ -526,8 +494,7 @@ rt_inline rt_int32_t divide(rt_int32_t *n, rt_int32_t base)
 rt_inline int skip_atoi(const char **s)
 {
 	register int i=0;
-	while (isdigit(**s))
-		i = i * 10 + *((*s)++) - '0';
+	while (isdigit(**s)) i = i*10 + *((*s)++) - '0';
 
 	return i;
 }
@@ -561,8 +528,7 @@ static char *print_number(char *buf, char *end, long num, int base, int s, int t
 	size = s;
 
 	digits = (type & LARGE) ? large_digits : small_digits;
-	if (type & LEFT)
-		type &= ~ZEROPAD;
+	if (type & LEFT) type &= ~ZEROPAD;
 
 	c = (type & ZEROPAD) ? '0' : ' ';
 
@@ -588,17 +554,14 @@ static char *print_number(char *buf, char *end, long num, int base, int s, int t
 #endif
 
 	i = 0;
-	if (num == 0)
-		tmp[i++]='0';
+	if (num == 0) tmp[i++]='0';
 	else
 	{
-		while (num != 0)
-			tmp[i++] = digits[divide(&num, base)];
+		while (num != 0) tmp[i++] = digits[divide(&num, base)];
 	}
 
 #ifdef RT_PRINTF_PRECISION
-	if (i > precision)
-		precision = i;
+	if (i > precision) precision = i;
 	size -= precision;
 #else
 	size -= i;
@@ -606,13 +569,9 @@ static char *print_number(char *buf, char *end, long num, int base, int s, int t
 
 	if (!(type&(ZEROPAD | LEFT)))
 	{
-		if ((sign)&&(size>0))
-			size--;
-
 		while (size-->0)
 		{
-			if (buf <= end)
-				*buf = ' ';
+			if (buf <= end) *buf = ' ';
 			++ buf;
 		}
 	}
@@ -632,14 +591,12 @@ static char *print_number(char *buf, char *end, long num, int base, int s, int t
 	{
 		if (base==8)
 		{
-			if (buf <= end)
-				*buf = '0';
+			if (buf <= end) *buf = '0';
 			++ buf;
 		}
 		else if (base == 16)
 		{
-			if (buf <= end)
-				*buf = '0';
+			if (buf <= end) *buf = '0';
 			++ buf;
 			if (buf <= end)
 			{
@@ -655,8 +612,7 @@ static char *print_number(char *buf, char *end, long num, int base, int s, int t
 	{
 		while (size-- > 0)
 		{
-			if (buf <= end)
-				*buf = c;
+			if (buf <= end) *buf = c;
 			++ buf;
 		}
 	}
@@ -664,8 +620,7 @@ static char *print_number(char *buf, char *end, long num, int base, int s, int t
 #ifdef RT_PRINTF_PRECISION
 	while (i < precision--)
 	{
-		if (buf <= end)
-			*buf = '0';
+		if (buf <= end) *buf = '0';
 		++ buf;
 	}
 #endif
@@ -673,15 +628,13 @@ static char *print_number(char *buf, char *end, long num, int base, int s, int t
 	/* put number in the temporary buffer */
 	while (i-- > 0)
 	{
-		if (buf <= end)
-			*buf = tmp[i];
+		if (buf <= end) *buf = tmp[i];
 		++ buf;
 	}
 
 	while (size-- > 0)
 	{
-		if (buf <= end)
-			*buf = ' ';
+		if (buf <= end) *buf = ' ';
 		++ buf;
 	}
 
@@ -702,7 +655,7 @@ static rt_int32_t vsnprintf(char *buf, rt_size_t size, const char *fmt, va_list 
 	rt_uint8_t base;			/* the base of number */
 	rt_uint8_t flags;			/* flags to print number */
 	rt_uint8_t qualifier;		/* 'h', 'l', or 'L' for integer fields */
-	rt_int32_t field_width;		/* width of output field */
+	rt_int32_t field_width;	/* width of output field */
 
 #ifdef RT_PRINTF_PRECISION
 	int precision;		/* min. # of digits for integers and max for a string */
@@ -722,8 +675,7 @@ static rt_int32_t vsnprintf(char *buf, rt_size_t size, const char *fmt, va_list 
 	{
 		if (*fmt != '%')
 		{
-			if (str <= end)
-				*str = *fmt;
+			if (str <= end) *str = *fmt;
 			++ str;
 			continue;
 		}
@@ -776,11 +728,11 @@ static rt_int32_t vsnprintf(char *buf, rt_size_t size, const char *fmt, va_list 
 #endif
 		/* get the conversion qualifier */
 		qualifier = 0;
+		if (*fmt == 'h' || *fmt == 'l'
 #ifdef RT_PRINTF_LONGLONG
-		if (*fmt == 'h' || *fmt == 'l' || *fmt == 'L')
-#else
-		if (*fmt == 'h' || *fmt == 'l')
+				|| *fmt == 'L'
 #endif
+		   )
 		{
 			qualifier = *fmt;
 			++ fmt;
@@ -941,7 +893,7 @@ static rt_int32_t vsnprintf(char *buf, rt_size_t size, const char *fmt, va_list 
 	/* the trailing null byte doesn't count towards the total
 	* ++str;
 	*/
-	return str - buf;
+	return str-buf;
 }
 
 /**
@@ -962,7 +914,6 @@ rt_int32_t rt_snprintf(char *buf, rt_size_t size, const char *fmt, ...)
 
 	return n;
 }
-RTM_EXPORT(rt_snprintf);
 
 /**
  * This function will fill a formatted string to buffer
@@ -975,7 +926,6 @@ rt_int32_t rt_vsprintf(char *buf, const char *format, va_list arg_ptr)
 {
 	return vsnprintf(buf, (rt_size_t) -1, format, arg_ptr);
 }
-RTM_EXPORT(rt_vsprintf);
 
 /**
  * This function will fill a formatted string to buffer
@@ -994,7 +944,6 @@ rt_int32_t rt_sprintf(char *buf, const char *format, ...)
 
 	return n;
 }
-RTM_EXPORT(rt_sprintf);
 
 #ifdef RT_USING_CONSOLE
 
@@ -1008,7 +957,6 @@ rt_device_t rt_console_get_device(void)
 {
 	return _console_device;
 }
-RTM_EXPORT(rt_console_get_device);
 
 /**
  * This function will set a device as console device.
@@ -1043,10 +991,9 @@ rt_device_t rt_console_set_device(const char *name)
 
 	return old;
 }
-RTM_EXPORT(rt_console_set_device);
 #endif
 
-#if defined(__GNUC__) || defined(__ADSPBLACKFIN__)
+#if defined(__GNUC__)
 void rt_hw_console_output(const char *str) __attribute__((weak));
 void rt_hw_console_output(const char *str)
 #elif defined(__CC_ARM)
@@ -1060,7 +1007,6 @@ void rt_hw_console_output(const char *str)
 {
 	/* empty console output */
 }
-RTM_EXPORT(rt_hw_console_output);
 
 /**
  * This function will print a formatted string on system console
@@ -1069,6 +1015,7 @@ RTM_EXPORT(rt_hw_console_output);
  */
 void rt_kprintf(const char *fmt, ...)
 {
+
 	va_list args;
 	rt_size_t length;
 	static char rt_log_buf[RT_CONSOLEBUF_SIZE];
@@ -1089,13 +1036,10 @@ void rt_kprintf(const char *fmt, ...)
 #endif
 	va_end(args);
 }
-RTM_EXPORT(rt_kprintf);
 #else
 void rt_kprintf(const char *fmt, ...)
 {
 }
-RTM_EXPORT(rt_kprintf);
-
 #endif
 
 #ifdef RT_USING_HEAP
@@ -1140,7 +1084,6 @@ void* rt_malloc_align(rt_size_t size, rt_size_t align)
 
 	return ptr;
 }
-RTM_EXPORT(rt_malloc_align);
 
 /**
  * This function release the memory block, which is allocated by rt_malloc_align
@@ -1148,14 +1091,13 @@ RTM_EXPORT(rt_malloc_align);
  *
  * @param ptr the memory block pointer
  */
-void rt_free_align(void *ptr)
+void rt_free_align(void* ptr)
 {
-	void *real_ptr;
+	void* real_ptr;
 
 	real_ptr = (void*)*(rt_uint32_t*)((rt_uint32_t)ptr - sizeof(void*));
 	rt_free(real_ptr);
 }
-RTM_EXPORT(rt_free_align);
 #endif
 
 #if !defined (RT_USING_NEWLIB) && defined (RT_USING_MINILIBC) && defined (__GNUC__)

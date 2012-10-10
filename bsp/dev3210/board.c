@@ -1,7 +1,7 @@
 /*
  * File      : board.c
  * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2006 - 2012, RT-Thread Development Team
+ * COPYRIGHT (C) 2006, RT-Thread Develop Team
  *
  * The license and distribution terms for this file may be
  * found in the file LICENSE in this distribution or at
@@ -22,19 +22,18 @@
 /**
  * @addtogroup Loongson SoC3210
  */
-
 /*@{*/
 
 /**
  * This is the timer interrupt service routine.
  */
-void rt_hw_timer_handler(void)
+void rt_hw_timer_handler()
 {
-	unsigned int count;
+    unsigned int count;
 
-	count = read_c0_compare();
-	write_c0_compare(count);
-	write_c0_count(0);
+    count = read_c0_compare();
+    write_c0_compare(count);
+    write_c0_count(0);
 
 	/* increase a OS tick */
 	rt_tick_increase();
@@ -43,16 +42,16 @@ void rt_hw_timer_handler(void)
 /**
  * This function will initial OS timer
  */
-void rt_hw_timer_init(void)
+void rt_hw_timer_init()
 {
-	write_c0_compare(CPU_HZ/2/RT_TICK_PER_SECOND);
-	write_c0_count(0);
+    write_c0_compare(CPU_HZ/2/RT_TICK_PER_SECOND);
+    write_c0_count(0);
 }
 
 /**
  * This function will initial sam7s64 board.
  */
-void rt_hw_board_init(void)
+void rt_hw_board_init()
 {
 #ifdef RT_USING_UART
 	/* init hardware UART device */
@@ -80,7 +79,7 @@ void rt_hw_board_init(void)
 #define UARTLSR_PE		(1 << 2)
 #define UARTLSR_OE		(1 << 1)
 #define UARTLSR_DR		(1 << 0)
-void rt_hw_console_output(const char *ptr)
+void rt_hw_console_output(const char* ptr)
 {
 	/* stream mode */
 	while (*ptr)

@@ -207,17 +207,7 @@ static void token_run(struct finsh_token* self)
 			break;
 
 		case '/':
-			ch = token_next_char(self);
-			if (ch == '/')
-			{
-				/* line comments, set to end of file */
-				self->current_token = finsh_token_type_eof;
-			}
-			else
-			{
-				token_prev_char(self);
-				self->current_token = finsh_token_type_div;
-			}
+			self->current_token = finsh_token_type_div;
 			break;
 
 		case '<':

@@ -2,23 +2,16 @@
  * @file
  * @brief EFM32GG_DK3750 board support package
  * @author Energy Micro AS
- * @version 2.0.1
+ * @version 1.2.2
  ******************************************************************************
  * @section License
- * <b>(C) Copyright 2012 Energy Micro AS, http://www.energymicro.com</b>
- *******************************************************************************
+ * <b>(C) Copyright 2011 Energy Micro AS, http://www.energymicro.com</b>
+ ******************************************************************************
  *
- * Permission is granted to anyone to use this software for any purpose,
- * including commercial applications, and to alter it and redistribute it
- * freely, subject to the following restrictions:
+ * This source code is the property of Energy Micro AS. The source and compiled
+ * code may only be used on Energy Micro "EFM32" microcontrollers.
  *
- * 1. The origin of this software must not be misrepresented; you must not
- *    claim that you wrote the original software.
- * 2. Altered source versions must be plainly marked as such, and must not be
- *    misrepresented as being the original software.
- * 3. This notice may not be removed or altered from any source distribution.
- * 4. The source and compiled code may only be used on Energy Micro "EFM32"
- *    microcontrollers and "EFR4" radios.
+ * This copyright notice may not be removed from the source code nor changed.
  *
  * DISCLAIMER OF WARRANTY/LIMITATION OF REMEDIES: Energy Micro AS has no
  * obligation to support this Software. Energy Micro AS is providing the
@@ -33,15 +26,14 @@
  *
  *****************************************************************************/
 
-/**************************************************************************//**
+/***************************************************************************//**
  * @addtogroup BSP
  * @{
- *****************************************************************************/
+ ******************************************************************************/
 
 #include "efm32.h"
-#include "em_gpio.h"
-#include "em_cmu.h"
-#include "em_usart.h"
+#include "efm32_gpio.h"
+#include "efm32_cmu.h"
 #include "dvk.h"
 #include "dvk_bcregisters.h"
 
@@ -49,7 +41,7 @@
 DVK_Init_TypeDef dvkOperationMode;
 
 /**************************************************************************//**
- * @brief Initialize EFM32GG_DK3750 board support package functionality
+ * @brief Initialize EMF32GG_DK3750 board support package functionality
  * @param[in] mode Initialize in EBI or SPI mode
  *****************************************************************************/
 void DVK_init(DVK_Init_TypeDef mode)
@@ -166,8 +158,7 @@ uint16_t DVK_getLEDs(void)
 /**************************************************************************//**
  * @brief DK3750 Peripheral Access Control
  *    Enable or disable access to on-board peripherals through switches
- *    and SPI switch where applicable. Turn off conflicting peripherals when
- *    enabling another.
+ *    and SPI switch where applicable
  * @param[in] perf
  *    Which peripheral to configure
  * @param[in] enable
@@ -211,13 +202,6 @@ void DVK_peripheralAccess(DVK_Peripheral_TypeDef perf, bool enable)
       /* Enable Ethernet analog switches */
       perfControl |= (1 << BC_PERICON_I2S_ETH_SHIFT);
       perfControl |= (1 << BC_PERICON_I2S_ETH_SEL_SHIFT);
-
-      /* Disable Analog Diff Input - pins PD0 and PD1 is shared */
-      perfControl &= ~(1 << BC_PERICON_ANALOG_DIFF_SHIFT);
-      /* Disable Touch Inputs - pin PD3 is shared */
-      perfControl &= ~(1 << BC_PERICON_TOUCH_SHIFT);
-      /* Disable Analog SE Input - pin PD2 is shared */
-      perfControl &= ~(1 << BC_PERICON_ANALOG_SE_SHIFT);
       break;
 
     case DVK_I2S:
@@ -229,13 +213,6 @@ void DVK_peripheralAccess(DVK_Peripheral_TypeDef perf, bool enable)
       perfControl |= (1 << BC_PERICON_AUDIO_OUT_SEL_SHIFT);
       perfControl |= (1 << BC_PERICON_I2S_ETH_SHIFT);
       perfControl &= ~(1 << BC_PERICON_I2S_ETH_SEL_SHIFT);
-
-      /* Disable Analog Diff Input - pins PD0 and PD1 is shared */
-      perfControl &= ~(1 << BC_PERICON_ANALOG_DIFF_SHIFT);
-      /* Disable Touch Inputs - pin PD3 is shared */
-      perfControl &= ~(1 << BC_PERICON_TOUCH_SHIFT);
-      /* Disable Analog SE Input - pin PD2 is shared */
-      perfControl &= ~(1 << BC_PERICON_ANALOG_SE_SHIFT);
       break;
 
     case DVK_TRACE:
@@ -244,10 +221,6 @@ void DVK_peripheralAccess(DVK_Peripheral_TypeDef perf, bool enable)
 
     case DVK_TOUCH:
       perfControl |= (1 << BC_PERICON_TOUCH_SHIFT);
-      /* Disconnect SPI switch, pin PD3 is shared */
-      perfControl &= ~(1 << BC_PERICON_I2S_ETH_SHIFT);
-      perfControl &= ~(1 << BC_PERICON_I2S_ETH_SEL_SHIFT);
-      DVK_spiControl(DVK_SPI_OFF);
       break;
 
     case DVK_AUDIO_IN:
@@ -261,18 +234,10 @@ void DVK_peripheralAccess(DVK_Peripheral_TypeDef perf, bool enable)
 
     case DVK_ANALOG_DIFF:
       perfControl |= (1 << BC_PERICON_ANALOG_DIFF_SHIFT);
-      /* Disconnect SPI switch, pin PD0 and PD1 is shared */
-      perfControl &= ~(1 << BC_PERICON_I2S_ETH_SHIFT);
-      perfControl &= ~(1 << BC_PERICON_I2S_ETH_SEL_SHIFT);
-      DVK_spiControl(DVK_SPI_OFF);
       break;
 
     case DVK_ANALOG_SE:
       perfControl |= (1 << BC_PERICON_ANALOG_SE_SHIFT);
-      /* Disconnect SPI switch, pin PD2 is shared */
-      perfControl &= ~(1 << BC_PERICON_I2S_ETH_SHIFT);
-      perfControl &= ~(1 << BC_PERICON_I2S_ETH_SEL_SHIFT);
-      DVK_spiControl(DVK_SPI_OFF);
       break;
 
     case DVK_MICROSD:
@@ -284,12 +249,6 @@ void DVK_peripheralAccess(DVK_Peripheral_TypeDef perf, bool enable)
       DVK_spiControl(DVK_SPI_Display);
       /* Enable SPI analog switch */
       perfControl |= (1 << BC_PERICON_I2S_ETH_SHIFT);
-      /* Disable Analog Diff Input - pins D0 and D1 is shared */
-      perfControl &= ~(1 << BC_PERICON_ANALOG_DIFF_SHIFT);
-      /* Disable Touch Inputs - pin D3 is shared */
-      perfControl &= ~(1 << BC_PERICON_TOUCH_SHIFT);
-      /* Disable Analog SE Input - pin D2 is shared */
-      perfControl &= ~(1 << BC_PERICON_ANALOG_SE_SHIFT);
       break;
     }
   }
@@ -316,19 +275,17 @@ void DVK_peripheralAccess(DVK_Peripheral_TypeDef perf, bool enable)
       break;
 
     case DVK_ETH:
-      /* Disable SPI interface */
+      /* Enable Ethernet analog switches */
       perfControl &= ~(1 << BC_PERICON_I2S_ETH_SHIFT);
       perfControl &= ~(1 << BC_PERICON_I2S_ETH_SEL_SHIFT);
-      DVK_spiControl(DVK_SPI_OFF);
       break;
 
     case DVK_I2S:
-      /* Disable SPI interface and audio out */
+      /* Also make surea Audio out is connected for I2S operation */
       perfControl &= ~(1 << BC_PERICON_AUDIO_OUT_SHIFT);
       perfControl &= ~(1 << BC_PERICON_AUDIO_OUT_SEL_SHIFT);
       perfControl &= ~(1 << BC_PERICON_I2S_ETH_SHIFT);
       perfControl &= ~(1 << BC_PERICON_I2S_ETH_SEL_SHIFT);
-      DVK_spiControl(DVK_SPI_OFF);
       break;
 
     case DVK_TRACE:
@@ -361,10 +318,8 @@ void DVK_peripheralAccess(DVK_Peripheral_TypeDef perf, bool enable)
       break;
 
     case DVK_TFT:
-      /* Disable SPI interface */
+      /* Disable SPI analog switch */
       perfControl &= ~(1 << BC_PERICON_I2S_ETH_SHIFT);
-      perfControl &= ~(1 << BC_PERICON_I2S_ETH_SEL_SHIFT);
-      DVK_spiControl(DVK_SPI_OFF);
       break;
     }
   }
@@ -409,11 +364,6 @@ void DVK_spiControl(DVK_SpiControl_TypeDef device)
 
   case DVK_SPI_Display:
     DVK_writeRegister(&BC_REGISTER->SPI_DEMUX, BC_SPI_DEMUX_SLAVE_DISPLAY);
-    break;
-
-  case DVK_SPI_OFF:
-    USART_Reset(USART1);
-    CMU_ClockEnable(cmuClock_USART1, false);
     break;
   }
 }

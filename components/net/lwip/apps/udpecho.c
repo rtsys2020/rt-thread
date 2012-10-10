@@ -15,7 +15,7 @@ void udpecho_entry(void *parameter)
 	while(1)
 	{
         /* received data to buffer */
-		netconn_recv(conn, &buf);
+		buf = netconn_recv(conn);
 
 		addr = netbuf_fromaddr(buf);
 		port = netbuf_fromport(buf);
@@ -24,7 +24,7 @@ void udpecho_entry(void *parameter)
 		netconn_connect(conn, addr, port);
 
 		/* reset address, and send to client */
-		buf->addr = *IP_ADDR_ANY;
+		buf->addr = RT_NULL;
 		netconn_send(conn, buf);
 
         /* release buffer */

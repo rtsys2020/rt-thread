@@ -10,8 +10,6 @@
  * Change Logs:
  * Date           Author       Notes
  * 2009-10-16     Bernard      first version
- * 2012-01-24     onelife      add TJpgDec (Tiny JPEG Decompressor) support
- * 2012-08-29     amsl         add Image zoom interface.
  */
 #include <rtthread.h>
 #include <rtgui/image.h>
@@ -29,7 +27,7 @@
 #ifdef RTGUI_IMAGE_BMP
 #include <rtgui/image_bmp.h>
 #endif
-#if (defined(RTGUI_IMAGE_JPEG) || defined(RTGUI_IMAGE_TJPGD))
+#ifdef RTGUI_IMAGE_JPEG
 #include <rtgui/image_jpeg.h>
 #endif
 #ifdef RTGUI_IMAGE_PNG
@@ -52,7 +50,7 @@ void rtgui_system_image_init(void)
 	rtgui_image_bmp_init();
 #endif
 
-#if (defined(RTGUI_IMAGE_JPEG) || defined(RTGUI_IMAGE_TJPGD))
+#ifdef RTGUI_IMAGE_JPEG
 	rtgui_image_jpeg_init();
 #endif
 
@@ -66,24 +64,7 @@ void rtgui_system_image_init(void)
 #endif
 }
 
-static struct rtgui_image_engine* rtgui_image_get_engine(const char* type)
-{
-	struct rtgui_list_node *node;
-	struct rtgui_image_engine *engine;
-
-	rtgui_list_foreach(node, &_rtgui_system_image_list)
-	{
-		engine = rtgui_list_entry(node, struct rtgui_image_engine, list);
-
-		if (strncasecmp(engine->name, type, strlen(engine->name)) ==0)
-			return engine;
-	}
-
-	return RT_NULL;
-}
-
-#if defined(RTGUI_USING_DFS_FILERW)
-struct rtgui_image_engine* rtgui_image_get_engine_by_filename(const char* fn)
+static struct rtgui_image_engine* rtgui_image_get_engine_by_filename(const char* fn)
 {
 	struct rtgui_list_node *node;
 	struct rtgui_image_engine *engine;
@@ -106,8 +87,24 @@ struct rtgui_image_engine* rtgui_image_get_engine_by_filename(const char* fn)
 
 	return RT_NULL;
 }
-RTM_EXPORT(rtgui_image_get_engine_by_filename);
 
+static struct rtgui_image_engine* rtgui_image_get_engine(const char* type)
+{
+	struct rtgui_list_node *node;
+	struct rtgui_image_engine *engine;
+
+	rtgui_list_foreach(node, &_rtgui_system_image_list)
+	{
+		engine = rtgui_list_entry(node, struct rtgui_image_engine, list);
+
+		if (strncasecmp(engine->name, type, strlen(engine->name)) ==0)
+			return engine;
+	}
+
+	return RT_NULL;
+}
+
+#if defined(RTGUI_USING_DFS_FILERW) || defined(RTGUI_USING_STDIO_FILERW)
 struct rtgui_image* rtgui_image_create_from_file(const char* type, const char* filename, rt_bool_t load)
 {
 	struct rtgui_filerw* filerw;
@@ -155,7 +152,6 @@ struct rtgui_image* rtgui_image_create_from_file(const char* type, const char* f
 
 	return image;
 }
-RTM_EXPORT(rtgui_image_create_from_file);
 
 struct rtgui_image* rtgui_image_create(const char* filename, rt_bool_t load)
 {
@@ -204,7 +200,6 @@ struct rtgui_image* rtgui_image_create(const char* filename, rt_bool_t load)
 
 	return image;
 }
-RTM_EXPORT(rtgui_image_create);
 #endif
 
 struct rtgui_image* rtgui_image_create_from_mem(const char* type, const rt_uint8_t* data, rt_size_t length, rt_bool_t load)
@@ -254,7 +249,6 @@ struct rtgui_image* rtgui_image_create_from_mem(const char* type, const rt_uint8
 
 	return image;
 }
-RTM_EXPORT(rtgui_image_create_from_mem);
 
 void rtgui_image_destroy(struct rtgui_image* image)
 {
@@ -265,7 +259,6 @@ void rtgui_image_destroy(struct rtgui_image* image)
 		rtgui_free(image->palette);
 	rtgui_free(image);
 }
-RTM_EXPORT(rtgui_image_destroy);
 
 /* register an image engine */
 void rtgui_image_register_engine(struct rtgui_image_engine* engine)
@@ -274,7 +267,6 @@ void rtgui_image_register_engine(struct rtgui_image_engine* engine)
 
 	rtgui_list_append(&_rtgui_system_image_list, &(engine->list));
 }
-RTM_EXPORT(rtgui_image_register_engine);
 
 void rtgui_image_blit(struct rtgui_image* image, struct rtgui_dc* dc, struct rtgui_rect* rect)
 {
@@ -289,7 +281,6 @@ void rtgui_image_blit(struct rtgui_image* image, struct rtgui_dc* dc, struct rtg
 		image->engine->image_blit(image, dc, rect);
 	}
 }
-RTM_EXPORT(rtgui_image_blit);
 
 struct rtgui_image_palette* rtgui_image_palette_create(rt_uint32_t ncolors)
 {
@@ -304,7 +295,6 @@ struct rtgui_image_palette* rtgui_image_palette_create(rt_uint32_t ncolors)
 
 	return palette;
 }
-RTM_EXPORT(rtgui_image_palette_create);
 
 void rtgui_image_get_rect(struct rtgui_image* image, struct rtgui_rect* rect)
 {
@@ -314,24 +304,4 @@ void rtgui_image_get_rect(struct rtgui_image* image, struct rtgui_rect* rect)
 	rect->x1 = 0; rect->y1 = 0;
 	rect->x2 = image->w; rect->y2 = image->h;
 }
-RTM_EXPORT(rtgui_image_get_rect);
 
-rtgui_image_t* rtgui_image_zoom(rtgui_image_t* image, float scalew, float scaleh, rt_uint32_t mode)  
-{ 
-	if (image != RT_NULL && image->engine != RT_NULL)
-	{
-		return image->engine->image_zoom(image, scalew, scaleh, mode);
-	}		
-	return RT_NULL;
-} 
-RTM_EXPORT(rtgui_image_zoom);
-
-rtgui_image_t* rtgui_image_rotate(rtgui_image_t* image, float angle)
-{
-	if (image != RT_NULL && image->engine != RT_NULL)
-	{
-		return image->engine->image_rotate(image, angle);
-	}
-	return RT_NULL;
-}
-RTM_EXPORT(rtgui_image_rotate);

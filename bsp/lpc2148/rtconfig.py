@@ -1,27 +1,14 @@
-import os
-
 # toolchains options
 ARCH='arm'
 CPU='lpc214x'
 CROSS_TOOL='keil'
-
-if os.getenv('RTT_CC'):
-	CROSS_TOOL = os.getenv('RTT_CC')
 
 if  CROSS_TOOL == 'gcc':
 	PLATFORM 	= 'gcc'
 	EXEC_PATH 	= 'D:/SourceryGCC/bin'
 elif CROSS_TOOL == 'keil':
 	PLATFORM 	= 'armcc'
-	EXEC_PATH 	= 'C:\Keil'
-elif CROSS_TOOL == 'iar':
-    print '================ERROR============================'
-    print 'Not support iar yet!'
-    print '================================================='
-    exit(0)	
-	
-if os.getenv('RTT_EXEC_PATH'):
-	EXEC_PATH = os.getenv('RTT_EXEC_PATH')	
+	EXEC_PATH 	= 'G:\Keil_MDK_380'
 
 BUILD = 'debug'
 

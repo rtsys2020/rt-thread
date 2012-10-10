@@ -158,6 +158,7 @@ static rt_err_t rt_uart_init (rt_device_t dev)
         // Enable UART Transmit
         UART_TxCmd( uart->UART, ENABLE);
 
+//        UART_IntConfig( uart->UART, UART_INTCFG_RLS, ENABLE);
         UART_IntConfig( uart->UART, UART_INTCFG_RBR, ENABLE);
     }
 #endif
@@ -183,6 +184,7 @@ static rt_err_t rt_uart_init (rt_device_t dev)
         // Enable UART Transmit
         UART_TxCmd( uart->UART, ENABLE);
 
+//        UART_IntConfig( uart->UART, UART_INTCFG_RLS, ENABLE);
         UART_IntConfig( uart->UART, UART_INTCFG_RBR, ENABLE);
     }
 #endif

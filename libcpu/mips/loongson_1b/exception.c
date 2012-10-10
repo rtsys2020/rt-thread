@@ -19,7 +19,6 @@
 /**
  * @addtogroup Loongson
  */
-
 /*@{*/
 
 /**

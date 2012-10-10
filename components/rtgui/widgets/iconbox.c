@@ -18,8 +18,8 @@
 static void _rtgui_iconbox_constructor(rtgui_iconbox_t *iconbox)
 {
 	/* init widget and set event handler */
-	RTGUI_WIDGET(iconbox)->flag |= (RTGUI_WIDGET_FLAG_TRANSPARENT | RTGUI_WIDGET_FLAG_FOCUSABLE);
-	rtgui_object_set_event_handler(RTGUI_OBJECT(iconbox), rtgui_iconbox_event_handler);
+	RTGUI_WIDGET(iconbox)->flag |= RTGUI_WIDGET_FLAG_TRANSPARENT;
+	rtgui_widget_set_event_handler(RTGUI_WIDGET(iconbox), rtgui_iconbox_event_handler);
 
 	/* set proper of control */
 	iconbox->image = RT_NULL;
@@ -36,11 +36,8 @@ static void _rtgui_iconbox_destructor(rtgui_iconbox_t *iconbox)
 		iconbox->image = RT_NULL;
 	}
 
-	if (iconbox->text != RT_NULL)
-	{
-		rt_free(iconbox->text);
-		iconbox->text = RT_NULL;
-	}
+	rt_free(iconbox->text);
+	iconbox->text = RT_NULL;
 }
 
 DEFINE_CLASS_TYPE(iconbox, "iconbox", 
@@ -49,40 +46,22 @@ DEFINE_CLASS_TYPE(iconbox, "iconbox",
 	_rtgui_iconbox_destructor,
 	sizeof(struct rtgui_iconbox));
 
-rt_bool_t rtgui_iconbox_event_handler(struct rtgui_object* object, struct rtgui_event* event)
+rt_bool_t rtgui_iconbox_event_handler(struct rtgui_widget* widget, struct rtgui_event* event)
 {
-	struct rtgui_iconbox* iconbox;
-
-	iconbox = RTGUI_ICONBOX(object);
+	struct rtgui_iconbox* iconbox = (struct rtgui_iconbox*)widget;
 
 	switch (event->type)
 	{
 	case RTGUI_EVENT_PAINT:
-		rtgui_theme_draw_iconbox(iconbox);
-		break;
-
-	case RTGUI_EVENT_MOUSE_BUTTON:
-		if (RTGUI_WIDGET_IS_HIDE(object)) return RT_FALSE;
-
+#ifndef RTGUI_USING_SMALL_SIZE
+		if (widget->on_draw != RT_NULL) widget->on_draw(widget, event);
+		else
+#endif
 		{
-			struct rtgui_event_mouse* emouse = (struct rtgui_event_mouse*)event;
-
-			/* it's not this widget event, clean status */
-			if (rtgui_rect_contains_point(&(RTGUI_WIDGET(iconbox)->extent), 
-				emouse->x, emouse->y) != RT_EOK)
-			{
-				if (iconbox->selected != RT_TRUE)
-				{
-					rtgui_iconbox_set_selected(iconbox, RT_TRUE);
-					rtgui_widget_focus(RTGUI_WIDGET(iconbox));
-				}
-				break;
-			}
+			rtgui_theme_draw_iconbox(iconbox);
 		}
-		return RT_TRUE;
 
-	default:
-		return rtgui_widget_event_handler(object, event);
+		break;
 	}
 
 	return RT_FALSE;
@@ -142,7 +121,7 @@ void rtgui_iconbox_destroy(struct rtgui_iconbox* iconbox)
 
 void rtgui_iconbox_set_text_position(struct rtgui_iconbox* iconbox, int position)
 {
-	struct rtgui_rect rect = {0, 0, 0, 0}, text_rect;
+	rtgui_rect_t rect = {0, 0, 0, 0}, text_rect;
 
 	RT_ASSERT(iconbox != RT_NULL);
 
@@ -176,11 +155,9 @@ void rtgui_iconbox_set_text_position(struct rtgui_iconbox* iconbox, int position
 			rect.x2 += text_rect.x2;
 		}
 	}
-}
 
-void rtgui_iconbox_set_selected(struct rtgui_iconbox* iconbox, rt_bool_t selected)
-{
-	RT_ASSERT(iconbox != RT_NULL);
-
-	iconbox->selected = selected;
+#ifndef RTGUI_USING_SMALL_SIZE
+	rtgui_widget_set_miniwidth(RTGUI_WIDGET(iconbox), rect.x2);
+	rtgui_widget_set_miniheight(RTGUI_WIDGET(iconbox), rect.y2);
+#endif
 }

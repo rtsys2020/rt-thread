@@ -1,7 +1,7 @@
 /*
  * File      : irq.c
  * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2006 - 2012, RT-Thread Development Team
+ * COPYRIGHT (C) 2006 - 2011, RT-Thread Development Team
  *
  * The license and distribution terms for this file may be
  * found in the file LICENSE in this distribution or at
@@ -37,13 +37,12 @@ void rt_interrupt_enter(void)
 {
 	rt_base_t level;
 
-	RT_DEBUG_LOG(RT_DEBUG_IRQ, ("irq coming..., irq nest:%d\n", rt_interrupt_nest));
+	RT_DEBUG_LOG(RT_DEBUG_IRQ, ("irq comming..., irq nest:%d\n", rt_interrupt_nest));
 
 	level = rt_hw_interrupt_disable();
 	rt_interrupt_nest ++;
 	rt_hw_interrupt_enable(level);
 }
-RTM_EXPORT(rt_interrupt_enter);
 
 /**
  * This function will be invoked by BSP, when leave interrupt service routine
@@ -62,12 +61,11 @@ void rt_interrupt_leave(void)
 	rt_interrupt_nest --;
 	rt_hw_interrupt_enable(level);
 }
-RTM_EXPORT(rt_interrupt_leave);
 
 /**
  * This function will return the nest of interrupt.
  * 
- * User application can invoke this function to get whether current
+ * User application can invoke this function to get whenther current 
  * context is interrupt context.
  * 
  * @return the number of nested interrupts.
@@ -76,10 +74,6 @@ rt_uint8_t rt_interrupt_get_nest(void)
 {
 	return rt_interrupt_nest;
 }
-RTM_EXPORT(rt_interrupt_get_nest);
-
-RTM_EXPORT(rt_hw_interrupt_disable);
-RTM_EXPORT(rt_hw_interrupt_enable);
 
 /*@}*/
 

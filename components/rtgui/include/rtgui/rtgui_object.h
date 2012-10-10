@@ -16,7 +16,6 @@
 
 
 #include <rtthread.h>
-#include <rtgui/rtgui.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,7 +30,7 @@ extern "C" {
 /** Casts the function pointer to an rtgui_constructor */
 #define RTGUI_DESTRUCTOR(destructor)                  ((rtgui_destructor_t)(destructor))
 
-/* pre-definition */
+/* pre-definetion */
 struct rtgui_object;
 typedef struct rtgui_object rtgui_object_t;
 typedef void (*rtgui_constructor_t)(rtgui_object_t *object);
@@ -74,7 +73,7 @@ const rtgui_type_t *rtgui_object_object_type_get(rtgui_object_t *object);
 
 #ifdef RTGUI_USING_CAST_CHECK
 	#define RTGUI_OBJECT_CAST(obj, obj_type, c_type) \
-		((c_type *)rtgui_object_check_cast((rtgui_object_t *)(obj), (obj_type), __FUNCTION__, __LINE__))
+		((c_type *)rtgui_object_check_cast((rtgui_object_t *)(obj), (obj_type)))
 #else
 	#define RTGUI_OBJECT_CAST(obj, obj_type, c_type)     ((c_type *)(obj))
 #endif
@@ -82,20 +81,13 @@ const rtgui_type_t *rtgui_object_object_type_get(rtgui_object_t *object);
 #define RTGUI_OBJECT_CHECK_TYPE(_obj, _type) \
 	(rtgui_type_inherits_from(((rtgui_object_t *)(_obj))->type, (_type)))
 
-DECLARE_CLASS_TYPE(object);
+DECLARE_CLASS_TYPE(type);
 /** Gets the type of an object */
-#define RTGUI_OBJECT_TYPE       RTGUI_TYPE(object)
+#define RTGUI_OBJECT_TYPE       RTGUI_TYPE(type)
 /** Casts the object to an rtgui_object_t */
-#define RTGUI_OBJECT(obj)       (RTGUI_OBJECT_CAST((obj), RTGUI_OBJECT_TYPE, struct rtgui_object))
+#define RTGUI_OBJECT(obj)       (RTGUI_OBJECT_CAST((obj), RTGUI_OBJECT_TYPE, rtgui_object_t))
 /** Checks if the object is an rtgui_Object */
 #define RTGUI_IS_OBJECT(obj)    (RTGUI_OBJECT_CHECK_TYPE((obj), RTGUI_OBJECT_TYPE))
-
-enum rtgui_object_flag
-{
-    RTGUI_OBJECT_FLAG_NONE     = 0x00,
-    RTGUI_OBJECT_FLAG_STATIC   = 0x01,
-    RTGUI_OBJECT_FLAG_DISABLED = 0x02
-};
 
 /* rtgui base object */
 struct rtgui_object
@@ -103,42 +95,17 @@ struct rtgui_object
 	/* object type */
 	const rtgui_type_t* type;
 
-	/* the event handler */
-	rtgui_event_handler_ptr event_handler;
-
-	enum rtgui_object_flag flag;
+	rt_bool_t is_static;
 };
+rtgui_type_t *rtgui_object_type_get(void);
 
 rtgui_object_t *rtgui_object_create(rtgui_type_t *object_type);
 void         rtgui_object_destroy(rtgui_object_t *object);
 
-/* set the event handler of object */
-void rtgui_object_set_event_handler(struct rtgui_object *object, rtgui_event_handler_ptr handler);
-/* object default event handler */
-rt_bool_t rtgui_object_event_handler(struct rtgui_object *object, struct rtgui_event* event);
-/* helper micro. widget event handlers could use this. */
-#define RTGUI_WIDGET_EVENT_HANDLER_PREPARE \
-	struct rtgui_widget *widget;  \
-	RT_ASSERT(object != RT_NULL); \
-	RT_ASSERT(event != RT_NULL);  \
-	widget = RTGUI_WIDGET(object); \
-	/* supress compiler warning */ \
-	widget = widget;
+void         rtgui_object_name_set(rtgui_object_t *object, const char *name);
+const char   *rtgui_object_name_get(rtgui_object_t *object);
 
-/** handle @param event on @param object's own event handler
- *
- * If the @param object does not have an event handler, which means the object
- * does not interested in any event, it will return RT_FALSE. Otherwise, the
- * return code of that handler is returned.
- */
-rt_inline rt_bool_t rtgui_object_handle(struct rtgui_object *object, struct rtgui_event *event)
-{
-    if (object->event_handler)
-        return object->event_handler(object, event);
-    return RT_FALSE;
-}
-
-rtgui_object_t *rtgui_object_check_cast(rtgui_object_t *object, rtgui_type_t *type, const char* func, int line);
+rtgui_object_t *rtgui_object_check_cast(rtgui_object_t *object, rtgui_type_t *type);
 rtgui_type_t   *rtk_object_object_type_get(rtgui_object_t *object);
 
 #ifdef __cplusplus

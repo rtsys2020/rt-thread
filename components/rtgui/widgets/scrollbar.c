@@ -20,7 +20,7 @@ static void _rtgui_scrollbar_constructor(rtgui_scrollbar_t *bar)
 	struct rtgui_rect rect = {0, 0, RTGUI_DEFAULT_SB_WIDTH, RTGUI_DEFAULT_SB_HEIGHT};
 
 	/* set event handler */
-	rtgui_object_set_event_handler(RTGUI_OBJECT(bar), rtgui_scrollbar_event_handler);
+	rtgui_widget_set_event_handler(RTGUI_WIDGET(bar), rtgui_scrollbar_event_handler);
 
 	rtgui_scrollbar_set_range(bar, 0, 100);
 	rtgui_scrollbar_set_page_step(bar, 20);
@@ -35,7 +35,7 @@ static void _rtgui_scrollbar_constructor(rtgui_scrollbar_t *bar)
 	rtgui_widget_set_rect(RTGUI_WIDGET(bar), &rect);
 
 	/* set gc */
-	RTGUI_WIDGET_TEXTALIGN(bar) = RTGUI_ALIGN_CENTER_HORIZONTAL | RTGUI_ALIGN_CENTER_VERTICAL;
+	RTGUI_WIDGET_TEXTALIGN(RTGUI_WIDGET(bar)) = RTGUI_ALIGN_CENTER_HORIZONTAL | RTGUI_ALIGN_CENTER_VERTICAL;
 }
 
 rt_inline rt_uint32_t _rtgui_scrollbar_get_length(rtgui_scrollbar_t *bar)
@@ -145,7 +145,7 @@ static void _rtgui_scrollbar_on_mouseclick(struct rtgui_widget * widget, struct 
 				if (mouse->y < bar_rect.y1 + thumb_position)
 				{
 					bar->thumb_position -= bar->page_step;
-					if (bar->thumb_position < bar->min_position)
+					if (bar->thumb_position < bar->min_position)					
 						bar->thumb_position = bar->min_position;
 				}
 				else if (mouse->y > thumb_position + bar->thumb_size)
@@ -216,7 +216,7 @@ static void _rtgui_scrollbar_on_mouseclick(struct rtgui_widget * widget, struct 
 				if (mouse->x <  bar_rect.x1 + thumb_position)
 				{
 					bar->thumb_position -= bar->page_step;
-					if (bar->thumb_position < bar->min_position)
+					if (bar->thumb_position < bar->min_position)					
 						bar->thumb_position = bar->min_position;
 				}
 				else if (mouse->x > thumb_position + bar->thumb_size)
@@ -257,25 +257,20 @@ __exit:
 	if ((mouse->button & (RTGUI_MOUSE_BUTTON_LEFT | RTGUI_MOUSE_BUTTON_DOWN)) ==
 		(RTGUI_MOUSE_BUTTON_LEFT | RTGUI_MOUSE_BUTTON_DOWN))
 	{
-		if (bar->on_scroll != RT_NULL)
-			bar->on_scroll(RTGUI_OBJECT(widget), RT_NULL);
+		if (bar->on_scroll != RT_NULL) bar->on_scroll(widget, RT_NULL);
 	}
 }
 
-rt_bool_t rtgui_scrollbar_event_handler(struct rtgui_object *object,
-										struct rtgui_event *event)
+rt_bool_t rtgui_scrollbar_event_handler(struct rtgui_widget * widget,
+	struct rtgui_event * event)
 {
-	struct rtgui_scrollbar* bar;
-	RTGUI_WIDGET_EVENT_HANDLER_PREPARE
-
-	bar = RTGUI_SCROLLBAR(object);
+	struct rtgui_scrollbar* bar = (struct rtgui_scrollbar*)widget;
 
 	switch (event->type)
 	{
 	case RTGUI_EVENT_PAINT:
 #ifndef RTGUI_USING_SMALL_SIZE
-		if (widget->on_draw != RT_NULL)
-			widget->on_draw(RTGUI_OBJECT(widget), event);
+		if (widget->on_draw != RT_NULL) widget->on_draw(widget, event);
 		else
 #endif
 		{
@@ -290,7 +285,7 @@ rt_bool_t rtgui_scrollbar_event_handler(struct rtgui_object *object,
 #ifndef RTGUI_USING_SMALL_SIZE
 			if (widget->on_mouseclick != RT_NULL)
 			{
-				widget->on_mouseclick(RTGUI_OBJECT(widget), event);
+				widget->on_mouseclick(widget, event);
 			}
 			else
 #endif
@@ -302,7 +297,7 @@ rt_bool_t rtgui_scrollbar_event_handler(struct rtgui_object *object,
 		break;
 
 	default:
-		return rtgui_widget_event_handler(object, event);
+		break;
 	}
 
 	return RT_FALSE;
@@ -362,7 +357,7 @@ void rtgui_scrollbar_set_range(struct rtgui_scrollbar* bar, int min, int max)
 
 	if (min >= max )
 	{
-		RTGUI_WIDGET_DISABLE(bar);
+		RTGUI_WIDGET_DISABLE(RTGUI_WIDGET(bar));
 		return;
 	}
 
@@ -380,12 +375,12 @@ void rtgui_scrollbar_set_page_step(struct rtgui_scrollbar* bar, int step)
 	if (bar->page_step > (bar->max_position - bar->min_position))
 	{
 		/* disable bar */
-		RTGUI_WIDGET_DISABLE(bar);
+		RTGUI_WIDGET_DISABLE(RTGUI_WIDGET(bar));
 	}
 	else
 	{
 		/* enable bar */
-		RTGUI_WIDGET_ENABLE(bar);
+		RTGUI_WIDGET_ENABLE(RTGUI_WIDGET(bar));
 	}
 }
 

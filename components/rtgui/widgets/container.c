@@ -10,40 +10,50 @@
  * Change Logs:
  * Date           Author       Notes
  * 2009-10-16     Bernard      first version
- * 2010-09-24     Bernard      fix container destroy issue
  */
-#include <rtgui/dc.h>
-#include <rtgui/rtgui_system.h>
-#include <rtgui/rtgui_app.h>
+#include <rtgui/widgets/toplevel.h>
 #include <rtgui/widgets/container.h>
-#include <rtgui/widgets/window.h>
 
 static void _rtgui_container_constructor(rtgui_container_t *container)
 {
-	/* init container */
-	rtgui_object_set_event_handler(RTGUI_OBJECT(container),
-		rtgui_container_event_handler);
-
+	/* set event handler and init field */
+	rtgui_widget_set_event_handler(RTGUI_WIDGET(container), rtgui_container_event_handler);
 	rtgui_list_init(&(container->children));
-	container->layout_box = RT_NULL;
-
+	
+	/* set focused widget to itself */
+	container->focused = RTGUI_WIDGET(container);
+	/* set container as focusable widget */
 	RTGUI_WIDGET(container)->flag |= RTGUI_WIDGET_FLAG_FOCUSABLE;
 }
 
 static void _rtgui_container_destructor(rtgui_container_t *container)
 {
+	/* destroy children of container */
 	rtgui_container_destroy_children(container);
-
-	if (container->layout_box != RT_NULL)
-		rtgui_object_destroy(RTGUI_OBJECT(container->layout_box));
 }
 
-DEFINE_CLASS_TYPE(container, "container",
+static void _rtgui_container_update_toplevel(rtgui_container_t* container)
+{
+	struct rtgui_list_node* node;
+
+	rtgui_list_foreach(node, &(container->children))
+	{
+		rtgui_widget_t* child = rtgui_list_entry(node, rtgui_widget_t, sibling);
+		/* set child toplevel */
+		child->toplevel = rtgui_widget_get_toplevel(RTGUI_WIDGET(container));
+
+		if (RTGUI_IS_CONTAINER(child))
+		{
+			_rtgui_container_update_toplevel(RTGUI_CONTAINER(child));
+		}
+	}
+}
+
+DEFINE_CLASS_TYPE(container, "container", 
 	RTGUI_WIDGET_TYPE,
 	_rtgui_container_constructor,
 	_rtgui_container_destructor,
 	sizeof(struct rtgui_container));
-RTM_EXPORT(_rtgui_container);
 
 rt_bool_t rtgui_container_dispatch_event(rtgui_container_t *container, rtgui_event_t* event)
 {
@@ -55,148 +65,73 @@ rt_bool_t rtgui_container_dispatch_event(rtgui_container_t *container, rtgui_eve
 		struct rtgui_widget* w;
 		w = rtgui_list_entry(node, struct rtgui_widget, sibling);
 
-		if (RTGUI_OBJECT(w)->event_handler &&
-			RTGUI_OBJECT(w)->event_handler(RTGUI_OBJECT(w), event) == RT_TRUE)
-			return RT_TRUE;
+		if (w->event_handler(w, event) == RT_TRUE) return RT_TRUE;
 	}
 
 	return RT_FALSE;
 }
-RTM_EXPORT(rtgui_container_dispatch_event);
-
-/* broadcast means that the return value of event handlers will be ignored. The
- * events will always reach every child.*/
-rt_bool_t rtgui_container_broadcast_event(struct rtgui_container *container, struct rtgui_event *event)
-{
-	struct rtgui_list_node* node;
-
-	rtgui_list_foreach(node, &(container->children))
-	{
-		struct rtgui_widget* w;
-		w = rtgui_list_entry(node, struct rtgui_widget, sibling);
-
-		if (RTGUI_OBJECT(w)->event_handler)
-			RTGUI_OBJECT(w)->event_handler(RTGUI_OBJECT(w), event);
-	}
-
-	return RT_FALSE;
-}
-RTM_EXPORT(rtgui_container_broadcast_event);
 
 rt_bool_t rtgui_container_dispatch_mouse_event(rtgui_container_t *container, struct rtgui_event_mouse* event)
 {
 	/* handle in child widget */
 	struct rtgui_list_node* node;
-	struct rtgui_widget *old_focus;
+	rtgui_widget_t *focus;
 
-	old_focus = RTGUI_WIDGET(container)->toplevel->focused_widget;
-
+	/* get focus widget on toplevel */
+	focus = RTGUI_CONTAINER(RTGUI_WIDGET(container)->toplevel)->focused;
 	rtgui_list_foreach(node, &(container->children))
 	{
 		struct rtgui_widget* w;
 		w = rtgui_list_entry(node, struct rtgui_widget, sibling);
-		if (rtgui_rect_contains_point(&(w->extent),
-					                  event->x, event->y) == RT_EOK)
+		if (rtgui_rect_contains_point(&(w->extent), event->x, event->y) == RT_EOK)
 		{
-			if ((old_focus != w) && RTGUI_WIDGET_IS_FOCUSABLE(w))
+			if ((focus != w) && RTGUI_WIDGET_IS_FOCUSABLE(w))
 				rtgui_widget_focus(w);
-			if (RTGUI_OBJECT(w)->event_handler &&
-				RTGUI_OBJECT(w)->event_handler(RTGUI_OBJECT(w),
-											   (rtgui_event_t*)event) == RT_TRUE)
-				return RT_TRUE;
+			if (w->event_handler(w, (rtgui_event_t*)event) == RT_TRUE) return RT_TRUE;
 		}
 	}
 
 	return RT_FALSE;
 }
-RTM_EXPORT(rtgui_container_dispatch_mouse_event);
 
-rt_bool_t rtgui_container_event_handler(struct rtgui_object* object, struct rtgui_event* event)
+rt_bool_t rtgui_container_event_handler(rtgui_widget_t* widget, rtgui_event_t* event)
 {
-	struct rtgui_container *container;
-	struct rtgui_widget    *widget;
-
-	RT_ASSERT(object != RT_NULL);
-	RT_ASSERT(event != RT_NULL);
-
-	container = RTGUI_CONTAINER(object);
-	widget    = RTGUI_WIDGET(object);
+	rtgui_container_t *container = RTGUI_CONTAINER(widget);
 
 	switch (event->type)
 	{
 	case RTGUI_EVENT_PAINT:
-		{
-			struct rtgui_dc* dc;
-			struct rtgui_rect rect;
-
-			dc = rtgui_dc_begin_drawing(widget);
-			if (dc == RT_NULL)
-				return RT_FALSE;
-			rtgui_widget_get_rect(widget, &rect);
-
-			/* fill container with background */
-			rtgui_dc_fill_rect(dc, &rect);
-
-			/* paint on each child */
-			rtgui_container_dispatch_event(container, event);
-
-			rtgui_dc_end_drawing(dc);
-		}
-		break;
-
-	case RTGUI_EVENT_KBD:
-		break;
-
-	case RTGUI_EVENT_MOUSE_BUTTON:
-	case RTGUI_EVENT_MOUSE_MOTION:
-		/* handle in child widget */
-		return rtgui_container_dispatch_mouse_event(container,
-			(struct rtgui_event_mouse*)event);
-
-	case RTGUI_EVENT_SHOW:
-		rtgui_widget_onshow(RTGUI_OBJECT(container), event);
-		rtgui_container_dispatch_event(container, event);
-		break;
-	case RTGUI_EVENT_HIDE:
-		rtgui_widget_onhide(RTGUI_OBJECT(container), event);
-		rtgui_container_dispatch_event(container, event);
-		break;
 	case RTGUI_EVENT_COMMAND:
 	case RTGUI_EVENT_RESIZE:
 		rtgui_container_dispatch_event(container, event);
 		break;
 
-	case RTGUI_EVENT_UPDATE_TOPLVL:
-		/* call parent handler */
-		rtgui_widget_onupdate_toplvl(object, event);
-		/* update the children */
-		rtgui_container_broadcast_event(container, event);
+	case RTGUI_EVENT_KBD:
+		{
+			/* let parent to handle keyboard event */
+			if (widget->parent != RT_NULL && widget->parent != widget->toplevel)
+			{
+				return widget->parent->event_handler(widget->parent, event);
+			}
+		}
 		break;
+
+	case RTGUI_EVENT_MOUSE_BUTTON:
+		/* handle in child widget */
+		return rtgui_container_dispatch_mouse_event(container,
+			(struct rtgui_event_mouse*)event);
+
+	case RTGUI_EVENT_MOUSE_MOTION:
+		return rtgui_container_dispatch_mouse_event(container,
+			(struct rtgui_event_mouse*)event);
 
 	default:
 		/* call parent widget event handler */
-		return rtgui_widget_event_handler(RTGUI_OBJECT(widget), event);
+		return rtgui_widget_event_handler(widget, event);
 	}
 
 	return RT_FALSE;
 }
-RTM_EXPORT(rtgui_container_event_handler);
-
-rtgui_container_t* rtgui_container_create(void)
-{
-	struct rtgui_container* container;
-
-	/* allocate container */
-	container = (struct rtgui_container*) rtgui_widget_create (RTGUI_CONTAINER_TYPE);
-	return container;
-}
-RTM_EXPORT(rtgui_container_create);
-
-void rtgui_container_destroy(rtgui_container_t* container)
-{
-	rtgui_widget_destroy(RTGUI_WIDGET(container));
-}
-RTM_EXPORT(rtgui_container_destroy);
 
 /*
  * This function will add a child to a container widget
@@ -215,15 +150,17 @@ void rtgui_container_add_child(rtgui_container_t *container, rtgui_widget_t* chi
 
 	/* update children toplevel */
 	if (RTGUI_WIDGET(container)->toplevel != RT_NULL &&
-		RTGUI_IS_WIN(RTGUI_WIDGET(container)->toplevel))
+		RTGUI_IS_TOPLEVEL(RTGUI_WIDGET(container)->toplevel))
 	{
-		struct rtgui_event_update_toplvl eup;
-		RTGUI_EVENT_UPDATE_TOPLVL_INIT(&eup);
-		eup.toplvl = RTGUI_WIDGET(container)->toplevel;
-		rtgui_container_broadcast_event(container, (struct rtgui_event*)&eup);
+		child->toplevel = rtgui_widget_get_toplevel(RTGUI_WIDGET(container));
+
+		/* update all child toplevel */
+		if (RTGUI_IS_CONTAINER(child))
+		{
+			_rtgui_container_update_toplevel(RTGUI_CONTAINER(child));
+		}
 	}
 }
-RTM_EXPORT(rtgui_container_add_child);
 
 /* remove a child to widget */
 void rtgui_container_remove_child(rtgui_container_t *container, rtgui_widget_t* child)
@@ -231,7 +168,13 @@ void rtgui_container_remove_child(rtgui_container_t *container, rtgui_widget_t* 
 	RT_ASSERT(container != RT_NULL);
 	RT_ASSERT(child != RT_NULL);
 
-	rtgui_widget_unfocus(child);
+	if (child == container->focused)
+	{
+		/* set focused to itself */
+		container->focused = RTGUI_WIDGET(container);
+
+		rtgui_widget_focus(RTGUI_WIDGET(container));
+	}
 
 	/* remove widget from parent's children list */
 	rtgui_list_remove(&(container->children), &(child->sibling));
@@ -240,15 +183,13 @@ void rtgui_container_remove_child(rtgui_container_t *container, rtgui_widget_t* 
 	child->parent = RT_NULL;
 	child->toplevel = RT_NULL;
 }
-RTM_EXPORT(rtgui_container_remove_child);
 
 /* destroy all children of container */
 void rtgui_container_destroy_children(rtgui_container_t *container)
 {
 	struct rtgui_list_node* node;
 
-	if (container == RT_NULL)
-		return;
+	if (container == RT_NULL) return;
 
 	node = container->children.next;
 	while (node != RT_NULL)
@@ -277,17 +218,17 @@ void rtgui_container_destroy_children(rtgui_container_t *container)
 	}
 
 	container->children.next = RT_NULL;
+	container->focused = RTGUI_WIDGET(container);
+	if (RTGUI_WIDGET(container)->parent != RT_NULL)
+		rtgui_widget_focus(RTGUI_WIDGET(container));
 
 	/* update widget clip */
-	rtgui_win_update_clip(RTGUI_WIN(RTGUI_WIDGET(container)->toplevel));
+	rtgui_toplevel_update_clip(RTGUI_TOPLEVEL(RTGUI_WIDGET(container)->toplevel));
 }
-RTM_EXPORT(rtgui_container_destroy_children);
 
 rtgui_widget_t* rtgui_container_get_first_child(rtgui_container_t* container)
 {
 	rtgui_widget_t* child = RT_NULL;
-
-	RT_ASSERT(container != RT_NULL);
 
 	if (container->children.next != RT_NULL)
 	{
@@ -296,24 +237,3 @@ rtgui_widget_t* rtgui_container_get_first_child(rtgui_container_t* container)
 
 	return child;
 }
-RTM_EXPORT(rtgui_container_get_first_child);
-
-void rtgui_container_set_box(rtgui_container_t* container, struct rtgui_box* box)
-{
-	if (container == RT_NULL || box  == RT_NULL)
-        return;
-
-	container->layout_box = box;
-	box->container = container;
-}
-RTM_EXPORT(rtgui_container_set_box);
-
-void rtgui_container_layout(struct rtgui_container* container)
-{
-	if (container == RT_NULL || container->layout_box == RT_NULL)
-		return;
-
-	rtgui_box_layout(container->layout_box);
-}
-RTM_EXPORT(rtgui_container_layout);
-

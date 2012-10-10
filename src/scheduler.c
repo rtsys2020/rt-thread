@@ -1,7 +1,7 @@
 /*
  * File      : scheduler.c
  * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2006 - 2012, RT-Thread Development Team
+ * COPYRIGHT (C) 2006 - 2011, RT-Thread Development Team
  *
  * The license and distribution terms for this file may be
  * found in the file LICENSE in this distribution or at
@@ -29,6 +29,8 @@
 #include <rtthread.h>
 #include <rthw.h>
 
+#include "kservice.h"
+
 static rt_int16_t rt_scheduler_lock_nest;
 extern volatile rt_uint8_t rt_interrupt_nest;
 
@@ -38,11 +40,11 @@ struct rt_thread *rt_current_thread;
 rt_uint8_t rt_current_priority;
 
 #if RT_THREAD_PRIORITY_MAX > 32
-/* Maximum priority level, 256 */
+/* maximun priority level, 256 */
 rt_uint32_t rt_thread_ready_priority_group;
 rt_uint8_t rt_thread_ready_table[32];
 #else
-/* Maximum priority level, 32 */
+/* maximun priority level, 32 */
 rt_uint32_t rt_thread_ready_priority_group;
 #endif
 
@@ -74,7 +76,6 @@ static void (*rt_scheduler_hook)(struct rt_thread *from, struct rt_thread *to);
 /**
  * @addtogroup Hook
  */
-
 /*@{*/
 
 /**
@@ -122,6 +123,7 @@ static void _rt_scheduler_stack_check(struct rt_thread *thread)
 /**
  * @ingroup SystemInit
  * This function will initialize the system scheduler
+ *
  */
 void rt_system_scheduler_init(void)
 {
@@ -140,15 +142,15 @@ void rt_system_scheduler_init(void)
 	rt_current_priority = RT_THREAD_PRIORITY_MAX - 1;
 	rt_current_thread = RT_NULL;
 
-	/* initialize ready priority group */
+	/* init ready priority group */
 	rt_thread_ready_priority_group = 0;
 
 #if RT_THREAD_PRIORITY_MAX > 32
-	/* initialize ready table */
+	/* init ready table */
 	rt_memset(rt_thread_ready_table, 0, sizeof(rt_thread_ready_table));
 #endif
 
-	/* initialize thread defunct */
+	/* init thread defunct */
 	rt_list_init(&rt_thread_defunct);
 }
 
@@ -206,7 +208,6 @@ void rt_system_scheduler_start(void)
 /**
  * @addtogroup Thread
  */
-
 /*@{*/
 
 /**

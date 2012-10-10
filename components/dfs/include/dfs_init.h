@@ -22,6 +22,9 @@ extern "C" {
 /* Initialization of dfs */
 void dfs_init(void);
 
+/* Initialization of dfs with filesystem server */
+void dfs_server_init(void);
+
 #ifdef __cplusplus
 }
 #endif

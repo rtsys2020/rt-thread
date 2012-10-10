@@ -17,10 +17,9 @@
 
 static void _rtgui_object_constructor(rtgui_object_t *object)
 {
-   if (!object)
-       return;
+   if (!object) return;
 
-   object->flag = RTGUI_OBJECT_FLAG_NONE;
+   object->is_static = RT_FALSE;
 }
 
 /* Destroys the object */
@@ -29,12 +28,11 @@ static void _rtgui_object_destructor(rtgui_object_t *object)
 	/* nothing */
 }
 
-DEFINE_CLASS_TYPE(object, "object",
+DEFINE_CLASS_TYPE(type, "object", 
 	RT_NULL,
 	_rtgui_object_constructor,
 	_rtgui_object_destructor,
 	sizeof(struct rtgui_object));
-RTM_EXPORT(_rtgui_object);
 
 void rtgui_type_object_construct(const rtgui_type_t *type, rtgui_object_t *object)
 {
@@ -117,12 +115,12 @@ rtgui_object_t *rtgui_object_create(rtgui_type_t *object_type)
 #endif
 
 	new_object->type = object_type;
+	new_object->is_static = RT_FALSE;
 
 	rtgui_type_object_construct(object_type, new_object);
 
 	return new_object;
 }
-RTM_EXPORT(rtgui_object_create);
 
 /**
  * @brief Destroys the object: it first sets the weak-pointers to RT_NULL, emits the "destroyed" signal, and then
@@ -133,8 +131,7 @@ RTM_EXPORT(rtgui_object_create);
  */
 void rtgui_object_destroy(rtgui_object_t *object)
 {
-	if (!object || object->flag & RTGUI_OBJECT_FLAG_STATIC)
-        return;
+	if (!object || object->is_static == RT_TRUE) return;
 
 #ifdef RTGUI_OBJECT_TRACE
 	obj_info.objs_number --;
@@ -148,7 +145,6 @@ void rtgui_object_destroy(rtgui_object_t *object)
 	/* release object */
 	rtgui_free(object);
 }
-RTM_EXPORT(rtgui_object_destroy);
 
 /**
  * @brief Checks if @a object can be cast to @a type.
@@ -158,19 +154,17 @@ RTM_EXPORT(rtgui_object_destroy);
  * @return Returns the object
  * @note You usually do not need to call this function, use specific macros instead (ETK_IS_WIDGET() for example)
  */
-rtgui_object_t *rtgui_object_check_cast(rtgui_object_t *obj, rtgui_type_t *obj_type, const char* func, int line)
+rtgui_object_t *rtgui_object_check_cast(rtgui_object_t *obj, rtgui_type_t *obj_type)
 {
 	if (!obj) return RT_NULL;
 
 	if (!rtgui_type_inherits_from(obj->type, obj_type))
 	{
-		rt_kprintf("%s[%d]: Invalid cast from \"%s\" to \"%s\"\n", func, line, rtgui_type_name_get(obj->type), rtgui_type_name_get(obj_type));
+		rt_kprintf("Invalid cast from \"%s\" to \"%s\"\n", rtgui_type_name_get(obj->type), rtgui_type_name_get(obj_type));
 	}
 
 	return obj;
 }
-RTM_EXPORT(rtgui_object_check_cast);
-
 
 /**
  * @brief Gets the type of the object
@@ -183,19 +177,4 @@ const rtgui_type_t *rtgui_object_object_type_get(rtgui_object_t *object)
 
 	return object->type;
 }
-RTM_EXPORT(rtgui_object_object_type_get);
-
-void rtgui_object_set_event_handler(struct rtgui_object *object, rtgui_event_handler_ptr handler)
-{
-	RT_ASSERT(object != RT_NULL);
-
-	object->event_handler = handler;
-}
-RTM_EXPORT(rtgui_object_set_event_handler);
-
-rt_bool_t rtgui_object_event_handler(struct rtgui_object *object, struct rtgui_event* event)
-{
-	return RT_FALSE;
-}
-RTM_EXPORT(rtgui_object_event_handler);
 
