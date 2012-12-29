@@ -12,8 +12,6 @@
  * 2008-02-22     QiuYi        The first version.
  * 2011-10-08     Bernard      fixed the block size in statfs.
  * 2011-11-23     Bernard      fixed the rename issue.
- * 2012-07-26     aozima       implement ff_memalloc and ff_memfree.
- * 2012-12-19     Bernard      fixed the O_APPEND and lseek issue.
  */
  
 #include <rtthread.h>
@@ -79,7 +77,7 @@ int dfs_elm_mount(struct dfs_filesystem *fs, unsigned long rwflag, const void *d
 {
 	FATFS *fat;
 	FRESULT result;
-	BYTE  index;
+	rt_uint32_t index;
 
 	/* handle RT-Thread device routine */
 	for (index = 0; index < _VOLUMES; index ++)
@@ -137,7 +135,7 @@ int dfs_elm_unmount(struct dfs_filesystem *fs)
 {
 	FATFS *fat;
 	FRESULT result;
-	BYTE index;
+	rt_uint32_t index;
 
 	fat = (FATFS *)fs->data;
 
@@ -173,7 +171,7 @@ int dfs_elm_mkfs(const char *device_name)
 	for (drv = 0; drv < _VOLUMES; drv ++)
 	{
 		dev = disk[drv];
-		if (dev != RT_NULL && rt_strncmp(dev->parent.name, device_name, RT_NAME_MAX) == 0)
+		if (rt_strncmp(dev->parent.name, device_name, RT_NAME_MAX) == 0)
 		{
 			/* 1: no partition table */
 			/* 0: auto selection of cluster size */
@@ -328,9 +326,7 @@ int dfs_elm_open(struct dfs_fd *file)
 
 			if (file->flags & DFS_O_APPEND)
 			{
-				/* seek to the end of file */
-				f_lseek(fd, fd->fsize);
-				file->pos = fd->fptr;
+				file->pos = f_lseek(fd, fd->fsize);
 			}
 		}
 		else
@@ -455,7 +451,6 @@ int dfs_elm_lseek(struct dfs_fd *file, rt_off_t offset)
 		if (result == FR_OK)
 		{
 			/* return current position */
-			file->pos = fd->fptr;
 			return fd->fptr;
 		}
 	}
@@ -524,7 +519,7 @@ int dfs_elm_getdents(struct dfs_fd *file, struct dirent *dirp, rt_uint32_t count
 		else
 			d->d_type = DFS_DT_REG;
 
-		d->d_namlen = (rt_uint8_t)rt_strlen(fn);
+		d->d_namlen = rt_strlen(fn);
 		d->d_reclen = (rt_uint16_t)sizeof(struct dirent);
 		rt_strncpy(d->d_name, fn, rt_strlen(fn) + 1);
 
@@ -674,7 +669,6 @@ int dfs_elm_stat(struct dfs_filesystem *fs, const char *path, struct stat *st)
 static const struct dfs_filesystem_operation dfs_elm =
 {
 	"elm",
-	DFS_FS_FLAG_DEFAULT,
 	dfs_elm_mount,
 	dfs_elm_unmount,
 	dfs_elm_mkfs,
@@ -774,7 +768,7 @@ DRESULT disk_ioctl(BYTE drv, BYTE ctrl, void *buff)
 		rt_memset(&geometry, 0, sizeof(geometry));
 		rt_device_control(device, RT_DEVICE_CTRL_BLK_GETGEOME, &geometry);
 
-		*(WORD *)buff = (WORD)(geometry.bytes_per_sector);
+		*(WORD *)buff = geometry.bytes_per_sector;
 	}
 	else if (ctrl == GET_BLOCK_SIZE) /* Get erase block size in unit of sectors (DWORD) */
 	{
@@ -785,15 +779,7 @@ DRESULT disk_ioctl(BYTE drv, BYTE ctrl, void *buff)
 
 		*(DWORD *)buff = geometry.block_size/geometry.bytes_per_sector;
 	}
-	else if (ctrl == CTRL_SYNC)
-	{
-		rt_device_control(device, RT_DEVICE_CTRL_BLK_SYNC, RT_NULL);
-	}
-	else if (ctrl == CTRL_ERASE_SECTOR)
-	{
-		rt_device_control(device, RT_DEVICE_CTRL_BLK_ERASE, buff);
-	}
-	
+
 	return RES_OK;
 }
 
@@ -840,19 +826,3 @@ void ff_rel_grant(_SYNC_t m)
 }
 
 #endif
-
-/* Memory functions */
-#if _USE_LFN == 3
-/* Allocate memory block */
-void* ff_memalloc (UINT size)
-{
-    return rt_malloc(size);
-}
-
-/* Free memory block */
-void ff_memfree (void* mem)
-{
-    rt_free(mem);
-}
-#endif /* _USE_LFN == 3 */
-

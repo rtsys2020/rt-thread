@@ -85,7 +85,6 @@ int sem_close(sem_t *sem)
 
     return 0;
 }
-RTM_EXPORT(sem_close);
 
 int sem_destroy(sem_t *sem)
 {
@@ -113,7 +112,6 @@ int sem_destroy(sem_t *sem)
 
     return 0;
 }
-RTM_EXPORT(sem_destroy);
 
 int sem_unlink(const char *name)
 {
@@ -139,7 +137,6 @@ int sem_unlink(const char *name)
     rt_set_errno(ENOENT);
     return -1;
 }
-RTM_EXPORT(sem_unlink);
 
 int sem_getvalue(sem_t *sem, int *sval)
 {
@@ -151,7 +148,6 @@ int sem_getvalue(sem_t *sem, int *sval)
 	*sval = sem->sem->value;
 	return 0;
 }
-RTM_EXPORT(sem_getvalue);
 
 int sem_init(sem_t *sem, int pshared, unsigned int value)
 {
@@ -183,7 +179,6 @@ int sem_init(sem_t *sem, int pshared, unsigned int value)
 
 	return 0;
 }
-RTM_EXPORT(sem_init);
 
 sem_t *sem_open(const char *name, int oflag, ...)
 {
@@ -264,7 +259,6 @@ __return:
 	}
 	return RT_NULL;
 }
-RTM_EXPORT(sem_open);
 
 int sem_post(sem_t *sem)
 {
@@ -282,7 +276,6 @@ int sem_post(sem_t *sem)
 	rt_set_errno(EINVAL);
 	return -1;
 }
-RTM_EXPORT(sem_post);
 
 int sem_timedwait(sem_t *sem, const struct timespec *abs_timeout)
 {
@@ -305,7 +298,6 @@ int sem_timedwait(sem_t *sem, const struct timespec *abs_timeout)
 	rt_set_errno(EINTR);
 	return -1;
 }
-RTM_EXPORT(sem_timedwait);
 
 int sem_trywait(sem_t *sem)
 {
@@ -328,7 +320,6 @@ int sem_trywait(sem_t *sem)
 	rt_set_errno(EINTR);
 	return -1;
 }
-RTM_EXPORT(sem_trywait);
 
 int sem_wait(sem_t *sem)
 {
@@ -346,5 +337,4 @@ int sem_wait(sem_t *sem)
 	rt_set_errno(EINTR);
 	return -1;
 }
-RTM_EXPORT(sem_wait);
 

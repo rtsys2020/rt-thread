@@ -1,7 +1,7 @@
 /*
  * File      : device.c
  * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2006 - 2012, RT-Thread Development Team
+ * COPYRIGHT (C) 2006 - 2011, RT-Thread Development Team
  *
  * The license and distribution terms for this file may be
  * found in the file LICENSE in this distribution or at
@@ -11,12 +11,10 @@
  * Date           Author       Notes
  * 2007-01-21     Bernard      the first version
  * 2010-05-04     Bernard      add rt_device_init implementation
- * 2012-10-20     Bernard      add device check in register function, 
- *                             provided by Rob <rdent@iinet.net.au>
- * 2012-12-25     Bernard      return RT_EOK if the device interface not exist.
  */
 
 #include <rtthread.h>
+#include "kservice.h"
 
 #ifdef RT_USING_DEVICE
 
@@ -29,22 +27,15 @@
  *
  * @return the error code, RT_EOK on initialization successfully.
  */
-rt_err_t rt_device_register(rt_device_t dev,
-                            const char *name,
-                            rt_uint16_t flags)
+rt_err_t rt_device_register(rt_device_t dev, const char *name, rt_uint16_t flags)
 {
-    if (dev == RT_NULL)
-        return -RT_ERROR;
+	if (dev == RT_NULL) return -RT_ERROR;
 
-    if (rt_device_find(name) != RT_NULL)
-        return -RT_ERROR;
+	rt_object_init(&(dev->parent), RT_Object_Class_Device, name);
+	dev->flag = flags;
 
-    rt_object_init(&(dev->parent), RT_Object_Class_Device, name);
-    dev->flag = flags;
-
-    return RT_EOK;
+	return RT_EOK;
 }
-RTM_EXPORT(rt_device_register);
 
 /**
  * This function removes a previously registered device driver
@@ -55,13 +46,12 @@ RTM_EXPORT(rt_device_register);
  */
 rt_err_t rt_device_unregister(rt_device_t dev)
 {
-    RT_ASSERT(dev != RT_NULL);
+	RT_ASSERT(dev != RT_NULL);
 
-    rt_object_detach(&(dev->parent));
+	rt_object_detach(&(dev->parent));
 
-    return RT_EOK;
+	return RT_EOK;
 }
-RTM_EXPORT(rt_device_unregister);
 
 /**
  * This function initializes all registered device driver
@@ -70,43 +60,39 @@ RTM_EXPORT(rt_device_unregister);
  */
 rt_err_t rt_device_init_all(void)
 {
-    struct rt_device *device;
-    struct rt_list_node *node;
-    struct rt_object_information *information;
-    register rt_err_t result;
+	struct rt_device *device;
+	struct rt_list_node *node;
+	struct rt_object_information *information;
+	register rt_err_t result;
 
-    extern struct rt_object_information rt_object_container[];
+	extern struct rt_object_information rt_object_container[];
 
-    information = &rt_object_container[RT_Object_Class_Device];
+	information = &rt_object_container[RT_Object_Class_Device];
 
-    /* for each device */
-    for (node  = information->object_list.next;
-         node != &(information->object_list);
-         node  = node->next)
-    {
-        rt_err_t (*init)(rt_device_t dev);
-        device = (struct rt_device *)rt_list_entry(node,
-                                                   struct rt_object,
-                                                   list);
+	/* for each device */
+	for (node = information->object_list.next; node != &(information->object_list); node = node->next)
+	{
+		rt_err_t (*init)(rt_device_t dev);
+		device = (struct rt_device *)rt_list_entry(node, struct rt_object, list);
 
-        /* get device init handler */
-        init = device->init;
-        if (init != RT_NULL && !(device->flag & RT_DEVICE_FLAG_ACTIVATED))
-        {
-            result = init(device);
-            if (result != RT_EOK)
-            {
-                rt_kprintf("To initialize device:%s failed. The error code is %d\n",
-                           device->parent.name, result);
-            }
-            else
-            {
-                device->flag |= RT_DEVICE_FLAG_ACTIVATED;
-            }
-        }
-    }
+		/* get device init handler */
+		init = device->init;
+		if (init != RT_NULL && !(device->flag & RT_DEVICE_FLAG_ACTIVATED))
+		{
+			result = init(device);
+			if (result != RT_EOK)
+			{
+				rt_kprintf("To initialize device:%s failed. The error code is %d\n",
+					device->parent.name, result);
+			}
+			else
+			{
+				device->flag |= RT_DEVICE_FLAG_ACTIVATED;
+			}
+		}
+	}
 
-    return RT_EOK;
+	return RT_EOK;
 }
 
 /**
@@ -118,41 +104,38 @@ rt_err_t rt_device_init_all(void)
  */
 rt_device_t rt_device_find(const char *name)
 {
-    struct rt_object *object;
-    struct rt_list_node *node;
-    struct rt_object_information *information;
+	struct rt_object *object;
+	struct rt_list_node *node;
+	struct rt_object_information *information;
 
-    extern struct rt_object_information rt_object_container[];
+	extern struct rt_object_information rt_object_container[];
 
-    /* enter critical */
-    if (rt_thread_self() != RT_NULL)
-        rt_enter_critical();
+	/* enter critical */
+	if (rt_thread_self() != RT_NULL)
+		rt_enter_critical();
 
-    /* try to find device object */
-    information = &rt_object_container[RT_Object_Class_Device];
-    for (node  = information->object_list.next;
-         node != &(information->object_list);
-         node  = node->next)
-    {
-        object = rt_list_entry(node, struct rt_object, list);
-        if (rt_strncmp(object->name, name, RT_NAME_MAX) == 0)
-        {
-            /* leave critical */
-            if (rt_thread_self() != RT_NULL)
-                rt_exit_critical();
+	/* try to find device object */
+	information = &rt_object_container[RT_Object_Class_Device];
+	for (node = information->object_list.next; node != &(information->object_list); node = node->next)
+	{
+		object = rt_list_entry(node, struct rt_object, list);
+		if (rt_strncmp(object->name, name, RT_NAME_MAX) == 0)
+		{
+			/* leave critical */
+			if (rt_thread_self() != RT_NULL)
+				rt_exit_critical();
 
-            return (rt_device_t)object;
-        }
-    }
+			return (rt_device_t)object;
+		}
+	}
 
-    /* leave critical */
-    if (rt_thread_self() != RT_NULL)
-        rt_exit_critical();
+	/* leave critical */
+	if (rt_thread_self() != RT_NULL)
+		rt_exit_critical();
 
-    /* not found */
-    return RT_NULL;
+	/* not found */
+	return RT_NULL;
 }
-RTM_EXPORT(rt_device_find);
 
 /**
  * This function will initialize the specified device
@@ -163,29 +146,32 @@ RTM_EXPORT(rt_device_find);
  */
 rt_err_t rt_device_init(rt_device_t dev)
 {
-    rt_err_t result = RT_EOK;
+	rt_err_t result = RT_EOK;
+	rt_err_t (*init)(rt_device_t dev);
+	
+	RT_ASSERT(dev != RT_NULL);
 
-    RT_ASSERT(dev != RT_NULL);
+	/* get device init handler */
+	init = dev->init;
+	if (init != RT_NULL)
+	{
+		if(!(dev->flag & RT_DEVICE_FLAG_ACTIVATED))
+		{
+			result = init(dev);
+			if (result != RT_EOK)
+			{
+				rt_kprintf("To initialize device:%s failed. The error code is %d\n",
+					dev->parent.name, result);
+			}
+			else
+			{
+				dev->flag |= RT_DEVICE_FLAG_ACTIVATED;
+			}
+		}
+	}
+	else result = -RT_ENOSYS;
 
-    /* get device init handler */
-    if (dev->init != RT_NULL)
-    {
-        if (!(dev->flag & RT_DEVICE_FLAG_ACTIVATED))
-        {
-            result = dev->init(dev);
-            if (result != RT_EOK)
-            {
-                rt_kprintf("To initialize device:%s failed. The error code is %d\n",
-                           dev->parent.name, result);
-            }
-            else
-            {
-                dev->flag |= RT_DEVICE_FLAG_ACTIVATED;
-            }
-        }
-    }
-
-    return result;
+	return result;
 }
 
 /**
@@ -198,48 +184,51 @@ rt_err_t rt_device_init(rt_device_t dev)
  */
 rt_err_t rt_device_open(rt_device_t dev, rt_uint16_t oflag)
 {
-    rt_err_t result = RT_EOK;
+	rt_err_t result;
+	rt_err_t (*open)(rt_device_t dev, rt_uint16_t oflag);
 
-    RT_ASSERT(dev != RT_NULL);
+	RT_ASSERT(dev != RT_NULL);
 
-    /* if device is not initialized, initialize it. */
-    if (!(dev->flag & RT_DEVICE_FLAG_ACTIVATED))
-    {
-        if (dev->init != RT_NULL)
-        {
-            result = dev->init(dev);
-            if (result != RT_EOK)
-            {
-                rt_kprintf("To initialize device:%s failed. The error code is %d\n",
-                           dev->parent.name, result);
+	result = RT_EOK;
 
-                return result;
-            }
-        }
+	/* if device is not initialized, initialize it. */
+	if (!(dev->flag & RT_DEVICE_FLAG_ACTIVATED))
+	{
+		result = dev->init(dev);
+		if (result != RT_EOK)
+		{
+			rt_kprintf("To initialize device:%s failed. The error code is %d\n",
+				dev->parent.name, result);
+			return result;
+		}
+		else
+		{
+			dev->flag |= RT_DEVICE_FLAG_ACTIVATED;
+		}
+	}
 
-        dev->flag |= RT_DEVICE_FLAG_ACTIVATED;
-    }
+	/* device is a stand alone device and opened */
+	if ((dev->flag & RT_DEVICE_FLAG_STANDALONE) && (dev->open_flag & RT_DEVICE_OFLAG_OPEN))
+		return -RT_EBUSY;
 
-    /* device is a stand alone device and opened */
-    if ((dev->flag & RT_DEVICE_FLAG_STANDALONE) &&
-        (dev->open_flag & RT_DEVICE_OFLAG_OPEN))
-    {
-        return -RT_EBUSY;
-    }
+	/* call device open interface */
+	open = dev->open;
+	if (open != RT_NULL)
+	{
+		result = open(dev, oflag);
+	}
+	else
+	{
+		/* no this interface in device driver */
+		result = -RT_ENOSYS;
+	}
 
-    /* call device open interface */
-    if (dev->open != RT_NULL)
-    {
-        result = dev->open(dev, oflag);
-    }
+	/* set open flag */
+	if (result == RT_EOK || result == -RT_ENOSYS)
+		dev->open_flag = oflag | RT_DEVICE_OFLAG_OPEN;
 
-    /* set open flag */
-    if (result == RT_EOK || result == -RT_ENOSYS)
-        dev->open_flag = oflag | RT_DEVICE_OFLAG_OPEN;
-
-    return result;
+	return result;
 }
-RTM_EXPORT(rt_device_open);
 
 /**
  * This function will close a device
@@ -250,23 +239,29 @@ RTM_EXPORT(rt_device_open);
  */
 rt_err_t rt_device_close(rt_device_t dev)
 {
-    rt_err_t result = RT_EOK;
+	rt_err_t result;
+	rt_err_t (*close)(rt_device_t dev);
 
-    RT_ASSERT(dev != RT_NULL);
+	RT_ASSERT(dev != RT_NULL);
 
-    /* call device close interface */
-    if (dev->close != RT_NULL)
-    {
-        result = dev->close(dev);
-    }
+	/* call device close interface */
+	close = dev->close;
+	if (close != RT_NULL)
+	{
+		result = close(dev);
+	}
+	else
+	{
+		/* no this interface in device driver */
+		result = -RT_ENOSYS;
+	}
 
-    /* set open flag */
-    if (result == RT_EOK || result == -RT_ENOSYS)
-        dev->open_flag = RT_DEVICE_OFLAG_CLOSE;
+	/* set open flag */
+	if (result == RT_EOK || result == -RT_ENOSYS)
+		dev->open_flag = RT_DEVICE_OFLAG_CLOSE;
 
-    return result;
+	return result;
 }
-RTM_EXPORT(rt_device_close);
 
 /**
  * This function will read some data from a device.
@@ -280,25 +275,23 @@ RTM_EXPORT(rt_device_close);
  *
  * @note since 0.4.0, the unit of size/pos is a block for block device.
  */
-rt_size_t rt_device_read(rt_device_t dev,
-                         rt_off_t    pos,
-                         void       *buffer,
-                         rt_size_t   size)
+rt_size_t rt_device_read(rt_device_t dev, rt_off_t pos, void *buffer, rt_size_t size)
 {
-    RT_ASSERT(dev != RT_NULL);
+	rt_size_t (*read)(rt_device_t dev, rt_off_t pos, void *buffer, rt_size_t size);
 
-    /* call device read interface */
-    if (dev->read != RT_NULL)
-    {
-        return dev->read(dev, pos, buffer, size);
-    }
+	RT_ASSERT(dev != RT_NULL);
 
-    /* set error code */
-    rt_set_errno(-RT_ENOSYS);
+	/* call device read interface */
+	read = dev->read;
+	if (read != RT_NULL)
+	{
+		return read(dev, pos, buffer, size);
+	}
 
-    return 0;
+	/* set error code */
+	rt_set_errno(-RT_ENOSYS);
+	return 0;
 }
-RTM_EXPORT(rt_device_read);
 
 /**
  * This function will write some data to a device.
@@ -312,25 +305,23 @@ RTM_EXPORT(rt_device_read);
  *
  * @note since 0.4.0, the unit of size/pos is a block for block device.
  */
-rt_size_t rt_device_write(rt_device_t dev,
-                          rt_off_t    pos,
-                          const void *buffer,
-                          rt_size_t   size)
+rt_size_t rt_device_write(rt_device_t dev, rt_off_t pos, const void *buffer, rt_size_t size)
 {
-    RT_ASSERT(dev != RT_NULL);
+	rt_size_t (*write)(rt_device_t dev, rt_off_t pos, const void *buffer, rt_size_t size);
 
-    /* call device write interface */
-    if (dev->write != RT_NULL)
-    {
-        return dev->write(dev, pos, buffer, size);
-    }
+	RT_ASSERT(dev != RT_NULL);
 
-    /* set error code */
-    rt_set_errno(-RT_ENOSYS);
+	/* call device write interface */
+	write = dev->write;
+	if (write != RT_NULL)
+	{
+		return write(dev, pos, buffer, size);
+	}
 
-    return 0;
+	/* set error code */
+	rt_set_errno(-RT_ENOSYS);
+	return 0;
 }
-RTM_EXPORT(rt_device_write);
 
 /**
  * This function will perform a variety of control functions on devices.
@@ -343,17 +334,19 @@ RTM_EXPORT(rt_device_write);
  */
 rt_err_t rt_device_control(rt_device_t dev, rt_uint8_t cmd, void *arg)
 {
-    RT_ASSERT(dev != RT_NULL);
+	rt_err_t (*control)(rt_device_t dev, rt_uint8_t cmd, void *arg);
 
-    /* call device write interface */
-    if (dev->control != RT_NULL)
-    {
-        return dev->control(dev, cmd, arg);
-    }
+	RT_ASSERT(dev != RT_NULL);
 
-    return RT_EOK;
+	/* call device write interface */
+	control = dev->control;
+	if (control != RT_NULL)
+	{
+		return control(dev, cmd, arg);
+	}
+
+	return -RT_ENOSYS;
 }
-RTM_EXPORT(rt_device_control);
 
 /**
  * This function will set the indication callback function when device receives
@@ -364,37 +357,29 @@ RTM_EXPORT(rt_device_control);
  *
  * @return RT_EOK
  */
-rt_err_t
-rt_device_set_rx_indicate(rt_device_t dev,
-                          rt_err_t (*rx_ind)(rt_device_t dev, rt_size_t size))
+rt_err_t rt_device_set_rx_indicate(rt_device_t dev, rt_err_t (*rx_ind)(rt_device_t dev, rt_size_t size))
 {
-    RT_ASSERT(dev != RT_NULL);
+	RT_ASSERT(dev != RT_NULL);
 
-    dev->rx_indicate = rx_ind;
-
-    return RT_EOK;
+	dev->rx_indicate = rx_ind;
+	return RT_EOK;
 }
-RTM_EXPORT(rt_device_set_rx_indicate);
 
 /**
- * This function will set the indication callback function when device has 
- * written data to physical hardware.
+ * This function will set the indication callback function when device has written
+ * data to physical hardware.
  *
  * @param dev the pointer of device driver structure
  * @param tx_done the indication callback function
  *
  * @return RT_EOK
  */
-rt_err_t
-rt_device_set_tx_complete(rt_device_t dev,
-                          rt_err_t (*tx_done)(rt_device_t dev, void *buffer))
+rt_err_t rt_device_set_tx_complete(rt_device_t dev, rt_err_t (*tx_done)(rt_device_t dev, void *buffer))
 {
-    RT_ASSERT(dev != RT_NULL);
+	RT_ASSERT(dev != RT_NULL);
 
-    dev->tx_complete = tx_done;
-
-    return RT_EOK;
+	dev->tx_complete = tx_done;
+	return RT_EOK;
 }
-RTM_EXPORT(rt_device_set_tx_complete);
 
 #endif

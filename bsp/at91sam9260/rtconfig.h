@@ -94,14 +94,10 @@
 /* using DFS support */
 #define RT_USING_DFS
 #define RT_USING_DFS_ELMFAT
-/* use long file name feature */
+/* use long file name feature 			*/
 #define RT_DFS_ELM_USE_LFN			2
 #define RT_DFS_ELM_REENTRANT
-/* define OEM code page */
-#define RT_DFS_ELM_CODE_PAGE	936
-/* Using OEM code page file */
-// #define RT_DFS_ELM_CODE_PAGE_FILE
-/* the max number of file length */
+/* the max number of file length 		*/
 #define RT_DFS_ELM_MAX_LFN			128
 /* #define RT_USING_DFS_YAFFS2 */
 #define RT_USING_DFS_DEVFS
@@ -113,9 +109,9 @@
 
 /* the max number of mounted filesystem */
 #define DFS_FILESYSTEMS_MAX		4
-/* the max number of opened files */
+/* the max number of opened files 		*/
 #define DFS_FD_MAX					16
-/* the max number of cached sector */
+/* the max number of cached sector 		*/
 #define DFS_CACHE_MAX_NUM   		4
 
 /* Enable freemodbus protocol stack*/
@@ -123,10 +119,7 @@
 
 //#define RT_USING_LED
 
-#define RT_USING_SDIO
-
-#define RT_USING_I2C
-#define RT_USING_I2C_BITOPS
+#define RT_USING_MMCSD
 
 #define RT_USING_DBGU
 /* #define RT_USING_UART0 */

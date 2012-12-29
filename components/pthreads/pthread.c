@@ -145,7 +145,6 @@ int pthread_create (pthread_t *tid, const pthread_attr_t *attr,
 	rt_free(ptd);
 	return EINVAL;
 }
-RTM_EXPORT(pthread_create);
 
 int pthread_detach(pthread_t thread)
 {
@@ -190,7 +189,6 @@ int pthread_detach(pthread_t thread)
 
 	return 0;
 }
-RTM_EXPORT(pthread_detach);
 
 int pthread_join (pthread_t thread, void **value_ptr)
 {
@@ -220,7 +218,6 @@ int pthread_join (pthread_t thread, void **value_ptr)
 	
 	return 0;
 }
-RTM_EXPORT(pthread_join);
 
 void pthread_exit (void* value)
 {
@@ -280,7 +277,6 @@ void pthread_exit (void* value)
 	/* reschedule thread */
 	rt_schedule();
 }
-RTM_EXPORT(pthread_exit);
 
 int pthread_once(pthread_once_t * once_control, void (*init_routine) (void))
 {
@@ -300,19 +296,16 @@ int pthread_once(pthread_once_t * once_control, void (*init_routine) (void))
 
 	return 0;
 }
-RTM_EXPORT(pthread_once);
 
 int pthread_atfork(void (*prepare)(void), void (*parent)(void), void (*child)(void))
 {
 	return ENOTSUP;
 }
-RTM_EXPORT(pthread_atfork);
 
 int pthread_kill(pthread_t thread, int sig)
 {
 	return ENOTSUP;
 }
-RTM_EXPORT(pthread_kill);
 
 void pthread_cleanup_pop(int execute)
 {
@@ -339,7 +332,6 @@ void pthread_cleanup_pop(int execute)
 		}
 	}
 }
-RTM_EXPORT(pthread_cleanup_pop);
 
 void pthread_cleanup_push(void (*routine)(void*), void *arg)
 {
@@ -362,7 +354,6 @@ void pthread_cleanup_push(void (*routine)(void*), void *arg)
 		rt_exit_critical();
 	}
 }
-RTM_EXPORT(pthread_cleanup_push);
 
 /*
  * According to IEEE Std 1003.1, 2004 Edition , following pthreads
@@ -410,7 +401,6 @@ int pthread_setcancelstate(int state, int *oldstate)
 
 	return EINVAL;
 }
-RTM_EXPORT(pthread_setcancelstate);
 
 int pthread_setcanceltype(int type, int *oldtype)
 {
@@ -428,7 +418,6 @@ int pthread_setcanceltype(int type, int *oldtype)
 
 	return 0;
 }
-RTM_EXPORT(pthread_setcanceltype);
 
 void pthread_testcancel(void)
 {
@@ -442,7 +431,6 @@ void pthread_testcancel(void)
 	if (ptd->cancelstate == PTHREAD_CANCEL_ENABLE) cancel = ptd->canceled;
 	if (cancel) pthread_exit((void*)PTHREAD_CANCELED);
 }
-RTM_EXPORT(pthread_testcancel);
 
 int pthread_cancel(pthread_t thread)
 {
@@ -474,5 +462,3 @@ int pthread_cancel(pthread_t thread)
 
 	return 0;
 }
-RTM_EXPORT(pthread_cancel);
-

@@ -16,11 +16,6 @@
 
 #include <rtthread.h>
 
-#if defined(_MSC_VER)
-#pragma section("FSymTab$f",read)
-#pragma section("VSymTab",read)
-#endif
-
 /* -- the beginning of option -- */
 #define FINSH_NAME_MAX          16      /* max length of identifier */
 #define FINSH_NODE_MAX          16      /* max number of node */
@@ -64,7 +59,7 @@ typedef unsigned char  u_char;
 typedef unsigned short u_short;
 typedef unsigned long  u_long;
 
-#if !defined(__CC_ARM) && !defined(__IAR_SYSTEMS_ICC__) && !defined(__ADSPBLACKFIN__) && !defined(_MSC_VER)
+#if !defined(__CC_ARM) && !defined(__IAR_SYSTEMS_ICC__)
 typedef unsigned int size_t;
 
 #ifndef NULL
@@ -124,7 +119,6 @@ struct finsh_syscall
 #endif
 	syscall_func func;		/* the function address of system call */
 };
-
 /* system call item */
 struct finsh_syscall_item
 {
@@ -147,7 +141,6 @@ struct finsh_sysvar
 	u_char		 type;		/* the type of variable */
 	void*		 var ;		/* the address of variable */
 };
-
 /* system variable item */
 struct finsh_sysvar_item
 {
@@ -170,18 +163,6 @@ struct finsh_sysvar* finsh_sysvar_lookup(const char* name);
 		 * @param name the name of function.
 		 * @param desc the description of function, which will show in help.
 		 */
-#ifdef _MSC_VER
-		#define FINSH_FUNCTION_EXPORT(name, desc)					 \
-		const char __fsym_##name##_name[] = #name;					 \
-		const char __fsym_##name##_desc[] = #desc;					 \
-		__declspec(allocate("FSymTab$f")) const struct finsh_syscall __fsym_##name = \
-		{							\
-			__fsym_##name##_name,	\
-			__fsym_##name##_desc,	\
-			(syscall_func)&name		\
-		};
-		#pragma comment(linker, "/merge:FSymTab=mytext")
-#else
 		#define FINSH_FUNCTION_EXPORT(name, desc)					 \
 		const char __fsym_##name##_name[] = #name;					 \
 		const char __fsym_##name##_desc[] = #desc;					 \
@@ -191,7 +172,6 @@ struct finsh_sysvar* finsh_sysvar_lookup(const char* name);
 			__fsym_##name##_desc,	\
 			(syscall_func)&name		\
 		};
-#endif
 
 		/**
 		 * @ingroup finsh
@@ -202,17 +182,6 @@ struct finsh_sysvar* finsh_sysvar_lookup(const char* name);
 		 * @param alias the alias name of function.
 		 * @param desc the description of function, which will show in help.
 		 */
-#ifdef _MSC_VER
-		#define FINSH_FUNCTION_EXPORT_ALIAS(name, alias, desc)		\
-		const char __fsym_##name##_name[] = #alias;					 \
-		const char __fsym_##name##_desc[] = #desc;					 \
-		__declspec(allocate("FSymTab$f")) const struct finsh_syscall __fsym_##name = \
-		{							\
-			__fsym_##name##_name,	\
-			__fsym_##name##_desc,	\
-			(syscall_func)&name		\
-		};
-#else
 		#define FINSH_FUNCTION_EXPORT_ALIAS(name, alias, desc)		\
 		const char __fsym_##name##_name[] = #alias;					 \
 		const char __fsym_##name##_desc[] = #desc;					 \
@@ -222,7 +191,7 @@ struct finsh_sysvar* finsh_sysvar_lookup(const char* name);
 			__fsym_##name##_desc,	\
 			(syscall_func)&name		\
 		};
-#endif
+
 		/**
 		 * @ingroup finsh
 		 *
@@ -232,18 +201,6 @@ struct finsh_sysvar* finsh_sysvar_lookup(const char* name);
 		 * @param type the type of variable.
 		 * @param desc the description of function, which will show in help.
 		 */
-#ifdef _MSC_VER
-		#define FINSH_VAR_EXPORT(name, type, desc)					\
-		const char __vsym_##name##_name[] = #name;					\
-		const char __vsym_##name##_desc[] = #desc;					\
-		__declspec(allocate("VSymTab")) const struct finsh_sysvar __vsym_##name = \
-		{							\
-			__vsym_##name##_name,	\
-			__vsym_##name##_desc,	\
-			type, 					\
-			(void*)&name			\
-		};
-#else
 		#define FINSH_VAR_EXPORT(name, type, desc)					\
 		const char __vsym_##name##_name[] = #name;					\
 		const char __vsym_##name##_desc[] = #desc;					\
@@ -254,7 +211,6 @@ struct finsh_sysvar* finsh_sysvar_lookup(const char* name);
 			type, 					\
 			(void*)&name			\
 		};
-#endif
 	#else
 		#define FINSH_FUNCTION_EXPORT(name, desc)					 \
 		const char __fsym_##name##_name[] = #name;					 \
@@ -413,4 +369,5 @@ void finsh_syscall_append(const char* name, syscall_func func);
  */
 void finsh_sysvar_append(const char* name, u_char type, void* addr);
 #endif
+
 #endif

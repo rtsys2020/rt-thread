@@ -39,7 +39,9 @@
 #ifndef UFFS_DEVICE_H
 #define UFFS_DEVICE_H
 
+
 #include "uffs/uffs_types.h"
+#include "uffs/uffs_config.h"
 #include "uffs/uffs_buf.h"
 #include "uffs/uffs_blockinfo.h"
 #include "uffs/uffs_pool.h"
@@ -52,10 +54,6 @@
 extern "C"{
 #endif
 
-/**
- * \def MAX_DIRTY_BUF_GROUPS
- */
-#define MAX_DIRTY_BUF_GROUPS    3
 
 
 /** 
@@ -74,7 +72,7 @@ struct uffs_BlockInfoCacheSt {
  */
 struct uffs_PartitionSt {
 	u16 start;		//!< start block number of partition
-	u16 end;		//!< end block number of partition
+	u16 end;		//!< end block number of partiton
 };
 
 /** 
@@ -82,7 +80,7 @@ struct uffs_PartitionSt {
  * \brief lock stuffs
  */
 struct uffs_LockSt {
-	OSSEM sem;
+	int sem;
 	int task_id;
 	int counter;
 };
@@ -113,7 +111,7 @@ struct uffs_PageBufDescSt {
 
 /** 
  * \struct uffs_PageCommInfoSt
- * \brief common data for device, should be initialised at early
+ * \brief common data for device, should be initialized at early
  * \note it is possible that pg_size is smaller than physical page size, but normally they are the same.
  * \note page data layout: [HEADER] + [DATA]
  */
@@ -143,23 +141,7 @@ typedef struct uffs_FlashStatSt {
 	int page_header_read_count;
 	int spare_write_count;
 	int spare_read_count;
-	unsigned long io_read;
-	unsigned long io_write;
 } uffs_FlashStat;
-
-
-/**
- * \struct uffs_ConfigSt
- * \typedef uffs_Config
- * \brief uffs config parameters
- */
-typedef struct uffs_ConfigSt {
-	int bc_caches;
-	int page_buffers;
-	int dirty_pages;
-	int dirty_groups;
-	int reserved_free_blocks;
-} uffs_Config;
 
 
 /** 
@@ -168,7 +150,7 @@ typedef struct uffs_ConfigSt {
  * \note one partition corresponding one uffs device.
  */
 struct uffs_DeviceSt {
-	URET (*Init)(uffs_Device *dev);				//!< low level initialisation
+	URET (*Init)(uffs_Device *dev);				//!< low level initialization
 	URET (*Release)(uffs_Device *dev);			//!< low level release
 	void *_private;								//!< private data for device
 
@@ -182,24 +164,22 @@ struct uffs_DeviceSt {
 	struct uffs_TreeSt				tree;		//!< tree list of block
 	struct uffs_NewBadBlockSt		bad;		//!< new discovered bad block
 	struct uffs_FlashStatSt			st;			//!< statistic (counters)
-	struct uffs_memAllocatorSt		mem;		//!< uffs memory allocator
-	struct uffs_ConfigSt			cfg;		//!< uffs config
+	struct uffs_memAllocatorSt		mem;		//!< uffs native memory allocator
 	u32	ref_count;								//!< device reference count
 	int	dev_num;								//!< device number (partition number)	
 };
 
-
 /** create the lock for uffs device */
-void uffs_DeviceInitLock(uffs_Device *dev);
+URET uffs_DeviceInitLock(uffs_Device *dev);
 
 /** delete the lock of uffs device */
-void uffs_DeviceReleaseLock(uffs_Device *dev);
+URET uffs_DeviceReleaseLock(uffs_Device *dev);
 
 /** lock uffs device */
-void uffs_DeviceLock(uffs_Device *dev);
+URET uffs_DeviceLock(uffs_Device *dev);
 
 /** unlock uffs device */
-void uffs_DeviceUnLock(uffs_Device *dev);
+URET uffs_DeviceUnLock(uffs_Device *dev);
 
 
 #ifdef __cplusplus

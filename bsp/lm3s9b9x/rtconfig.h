@@ -154,7 +154,5 @@
 /* TCP receive window. */
 #define RT_LWIP_TCP_WND		8192
 
-/* the size of each pbuf in the pbuf pool. */
-#define RT_LWIP_PBUF_POOL_BUFSIZE	1500
 
 #endif

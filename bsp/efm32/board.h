@@ -1,9 +1,9 @@
 /***************************************************************************//**
  * @file 	board.h
  * @brief 	Board support of RT-Thread RTOS for EFM32
- *  COPYRIGHT (C) 2012, RT-Thread Development Team
+ * 	COPYRIGHT (C) 2011, RT-Thread Development Team
  * @author 	onelife
- * @version 1.0
+ * @version 	0.4 beta
  *******************************************************************************
  * @section License
  * The license and distribution terms for this file may be found in the file
@@ -21,7 +21,6 @@
  * 2011-12-14   onelife     Add LFXO enabling routine in driver initialization
  *  function
  * 2011-12-20   onelife     Move SPI Auto-CS setting to "rtconfig.h"
- * 2012-05-15	onelife		Modified to compatible with CMSIS v3
  ******************************************************************************/
 #ifndef __BOARD_H__
 #define __BOARD_H__
@@ -36,29 +35,24 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include <efm32.h>
-#include <em_chip.h>
-#include <em_cmu.h>
-#include <em_rmu.h>
-#include <em_emu.h>
-#include <em_dma.h>
-#include <em_ebi.h>
-#include <em_rtc.h>
-#include <em_timer.h>
-#include <em_letimer.h>
-#include <em_gpio.h>
-#include <em_acmp.h>
-#include <em_adc.h>
-#include <em_usart.h>
-#include <em_leuart.h>
-#include <em_i2c.h>
+#include <efm32_chip.h>
+#include <efm32_cmu.h>
+#include <efm32_rmu.h>
+#include <efm32_dma.h>
+#include <efm32_rtc.h>
+#include <efm32_timer.h>
+#include <efm32_gpio.h>
+#include <efm32_acmp.h>
+#include <efm32_adc.h>
+#include <efm32_usart.h>
+#include <efm32_leuart.h>
+#include <efm32_i2c.h>
 
 #include <rtthread.h>
 
 #if (defined(EFM32_GXXX_DK) || defined(EFM32GG_DK3750))
 #include <dvk.h>
 #endif
-
-#include "drv_emu.h"
 
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
@@ -130,15 +124,6 @@ extern volatile rt_uint32_t rt_system_status;
  #define EFM32_HFXO_FREQUENCY		(00000000)
  #endif
 #endif
-#if defined(EFM32_USING_LFXO)
- #if (defined(EFM32_G8XX_STK) || defined(EFM32_GXXX_DK))
- #define EFM32_LETIMER_TOP_100HZ    (41)
- #elif defined(EFM32GG_DK3750)
- #define EFM32_LETIMER_TOP_100HZ    (41)
- #else
- #define EFM32_LETIMER_TOP_100HZ    (41)
- #endif
-#endif
 
 /* SECTION: USART */
 #define USART_RX_BUFFER_SIZE		(64)
@@ -170,8 +155,8 @@ extern volatile rt_uint32_t rt_system_status;
 #endif
 
 /* SECTION: ADC */
-#define ADC_CALI_REF				(adcRef2V5)
-#define ADC_CALI_CH 				(adcSingleInpCh5)
+#define ADC_CALI_REF				adcRef2V5
+#define ADC_CALI_CH 				adcSingleInpCh5
 #define ADC_CONVERT_FREQUENCY 		(7000000)
 
 #if (RT_CONSOLE_DEVICE == EFM_USART0)

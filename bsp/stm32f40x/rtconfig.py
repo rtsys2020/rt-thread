@@ -1,12 +1,7 @@
-import os
-
 # toolchains options
 ARCH='arm'
 CPU='cortex-m4'
 CROSS_TOOL='keil'
-
-if os.getenv('RTT_CC'):
-	CROSS_TOOL = os.getenv('RTT_CC')
 
 # cross_tool provides the cross compiler
 # EXEC_PATH is the compiler execute path, for example, CodeSourcery, Keil MDK, IAR
@@ -15,16 +10,12 @@ if  CROSS_TOOL == 'gcc':
 	EXEC_PATH 	= 'E:/Program Files/CodeSourcery/Sourcery G++ Lite/bin'
 elif CROSS_TOOL == 'keil':
 	PLATFORM 	= 'armcc'
-	EXEC_PATH 	= 'C:/Keil'
+	EXEC_PATH 	= 'E:/Keil'
 elif CROSS_TOOL == 'iar':
-    print '================ERROR============================'
-    print 'Not support iar yet!'
-    print '================================================='
-    exit(0)
+	PLATFORM 	= 'iar'
+	IAR_PATH 	= 'E:/Program Files/IAR Systems/Embedded Workbench 6.0'
 
-if os.getenv('RTT_EXEC_PATH'):
-	EXEC_PATH = os.getenv('RTT_EXEC_PATH')
-
+#
 BUILD = 'debug'
 STM32_TYPE = 'STM32F4XX'
 
@@ -40,8 +31,8 @@ if PLATFORM == 'gcc':
     OBJDUMP = PREFIX + 'objdump'
     OBJCPY = PREFIX + 'objcopy'
 
-    DEVICE = ' -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=softfp -ffunction-sections -fdata-sections'
-    CFLAGS = DEVICE 
+    DEVICE = ' -mcpu=cortex-m3 -mthumb -ffunction-sections -fdata-sections'
+    CFLAGS = DEVICE
     AFLAGS = ' -c' + DEVICE + ' -x assembler-with-cpp'
     LFLAGS = DEVICE + ' -Wl,--gc-sections,-Map=rtthread-stm32.map,-cref,-u,Reset_Handler -T stm32_rom.ld'
 
@@ -103,7 +94,7 @@ elif PLATFORM == 'iar':
     CFLAGS += ' --no_scheduling' 
     CFLAGS += ' --debug' 
     CFLAGS += ' --endian=little' 
-    CFLAGS += ' --cpu=Cortex-M4' 
+    CFLAGS += ' --cpu=Cortex-M3' 
     CFLAGS += ' -e' 
     CFLAGS += ' --fpu=None'
     CFLAGS += ' --dlib_config "' + IAR_PATH + '/arm/INC/c/DLib_Config_Normal.h"'    
@@ -114,7 +105,7 @@ elif PLATFORM == 'iar':
     AFLAGS += ' -s+' 
     AFLAGS += ' -w+' 
     AFLAGS += ' -r' 
-    AFLAGS += ' --cpu Cortex-M4' 
+    AFLAGS += ' --cpu Cortex-M3' 
     AFLAGS += ' --fpu None' 
 
     LFLAGS = ' --config stm32f10x_flash.icf'

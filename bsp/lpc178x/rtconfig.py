@@ -1,28 +1,17 @@
-import os
-
 # toolchains options
 ARCH='arm'
 CPU='cortex-m3'
 CROSS_TOOL='keil'
 
-if os.getenv('RTT_CC'):
-	CROSS_TOOL = os.getenv('RTT_CC')
-
 if  CROSS_TOOL == 'gcc':
 	PLATFORM 	= 'gcc'
-	EXEC_PATH 	= 'C:/Program Files/CodeSourcery/Sourcery_CodeBench_Lite_for_ARM_EABI/bin'
+	EXEC_PATH 	= 'E:/Program Files/CodeSourcery/Sourcery G++ Lite/bin'
 elif CROSS_TOOL == 'keil':
 	PLATFORM 	= 'armcc'
-	EXEC_PATH 	= 'C:/Keil'
+	EXEC_PATH 	= 'E:/Keil'
 elif CROSS_TOOL == 'iar':
-    print '================ERROR============================'
-    print 'Not support iar yet!'
-    print '================================================='
-    exit(0)
-
-if os.getenv('RTT_EXEC_PATH'):
-	EXEC_PATH = os.getenv('RTT_EXEC_PATH')
-
+	PLATFORM 	= 'iar'
+	EXEC_PATH 	= 'E:/Program Files/IAR Systems/Embedded Workbench 6.0/arm/bin'
 BUILD = 'debug'
 
 if PLATFORM == 'gcc':
@@ -40,7 +29,7 @@ if PLATFORM == 'gcc':
     DEVICE = ' -mcpu=cortex-m3 -mthumb'
     CFLAGS = DEVICE + ' -DRT_USING_MINILIBC'
     AFLAGS = ' -c' + DEVICE + ' -x assembler-with-cpp'
-    LFLAGS = DEVICE + ' -Wl,--gc-sections,-Map=rtthread-lpc178x.map,-cref,-u,Reset_Handler -T rtthread-lpc178x.ld'
+    LFLAGS = DEVICE + ' -Wl,--gc-sections,-Map=rtthread-lpc17xx.map,-cref,-u,Reset_Handler -T lpc178x_rom.ld'
 
     CPATH = ''
     LPATH = ''
@@ -64,7 +53,7 @@ elif PLATFORM == 'armcc':
     DEVICE = ' --device DARMP1'
     CFLAGS = DEVICE + ' --apcs=interwork'
     AFLAGS = DEVICE
-    LFLAGS = DEVICE + ' --info sizes --info totals --info unused --info veneers --list rtthread-lpc178x.map --scatter rtthread-lpc178x.sct'
+    LFLAGS = DEVICE + ' --info sizes --info totals --info unused --info veneers --list rtthread-lpc178x.map --scatter lpc178x_rom.sct'
 
     CFLAGS += ' -I' + EXEC_PATH + '/ARM/RV31/INC'
     LFLAGS += ' --libpath ' + EXEC_PATH + '/ARM/RV31/LIB'
@@ -78,3 +67,21 @@ elif PLATFORM == 'armcc':
         CFLAGS += ' -O2'
 
     POST_ACTION = 'fromelf --bin $TARGET --output rtthread.bin \nfromelf -z $TARGET'
+
+elif PLATFORM == 'iar':
+    # toolchains
+    CC = 'iccarm'
+    AS = 'iasmarm'
+    AR = 'iarchive'
+    LINK = 'ilinkarm'
+    TARGET_EXT = 'out'
+
+    DEVICE = ' --cpu DARMP1 --thumb'
+
+    CFLAGS = ''
+    AFLAGS = ''
+    LFLAGS = ' --config lpc17xx_flash.icf'
+
+    EXEC_PATH += '/arm/bin/'
+    RT_USING_MINILIBC = False
+    POST_ACTION = ''

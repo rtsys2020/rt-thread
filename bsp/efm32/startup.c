@@ -1,9 +1,9 @@
 /***************************************************************************//**
- * @file    startup.c
+ * @file    interrupt.c
  * @brief   This file is part of RT-Thread RTOS
- *  COPYRIGHT (C) 2012, RT-Thread Development Team
+ *  COPYRIGHT (C) 2011, RT-Thread Development Team
  * @author  Bernard, onelife
- * @version 1.0
+ * @version 0.4 beta
  *******************************************************************************
  * @section License
  * The license and distribution terms for this file may be found in the file
@@ -14,8 +14,6 @@
  * 2006-08-31   Bernard     first implementation
  * 2010-12-29   onelife     Modify for EFM32
  * 2011-12-20   onelife     Add RTGUI initialization routine
- * 2012-02-21   onelife     Add energy management initialization routine
- * 2012-05-15	onelife		Modified to compatible with CMSIS v3
  ******************************************************************************/
 
 /***************************************************************************//**
@@ -25,6 +23,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "board.h"
+#include <rtthread.h>
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -35,14 +34,20 @@ extern int Image$$RW_IRAM1$$ZI$$Limit;
 #elif __ICCARM__
 #pragma section="HEAP"
 #else
-extern int __bss_end__;
+extern int __bss_end;
 #endif
 
 /* Private variables ---------------------------------------------------------*/
 /* External function prototypes ----------------------------------------------*/
+extern int  rt_application_init(void);
+#ifdef RT_USING_FINSH
+extern void finsh_system_init(void);
+extern void finsh_set_device(const char* device);
+#endif
+
 /* Private function prototypes -----------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
-#ifdef RT_DEBUG
+#ifdef  DEBUG
 /***************************************************************************//**
  * @brief
  *  Reports the name of the source file and the source line number where the
@@ -58,7 +63,7 @@ extern int __bss_end__;
  * @param[in] line
  *  Assert error line source number
  ******************************************************************************/
-void assert_failed(uint8_t * file, uint32_t line)
+void assert_failed(u8* file, u32 line)
 {
     rt_kprintf("\n\r Wrong parameter value detected on\r\n");
     rt_kprintf("       file  %s\r\n", file);
@@ -89,7 +94,7 @@ void rtthread_startup(void)
     rt_system_heap_init(__segment_end("HEAP"), (void*)EFM32_SRAM_END);
     #else
     /* init memory system */
-    rt_system_heap_init((void*)&__bss_end__, (void*)EFM32_SRAM_END);
+    rt_system_heap_init((void*)&__bss_end, (void*)EFM32_SRAM_END);
     #endif
 #endif
 
@@ -133,9 +138,6 @@ void rtthread_startup(void)
 
     /* init idle thread */
     rt_thread_idle_init();
-
-    /* init energy mode thread */
-    efm32_emu_init();
 
     /* init application */
     rt_application_init();

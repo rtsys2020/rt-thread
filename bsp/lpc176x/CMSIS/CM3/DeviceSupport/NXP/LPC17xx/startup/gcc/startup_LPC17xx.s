@@ -1,27 +1,62 @@
-/**
- * startup_LPC17xx.s
- */
+/*****************************************************************************/
+/* startup_LPC17xx.s: Startup file for LPC17xx device series                 */
+/*****************************************************************************/
+/* Version: CodeSourcery Sourcery G++ Lite (with CS3)                        */
+/*****************************************************************************/
 
-	.syntax unified
-	.cpu cortex-m3
-	.fpu softvfp
-	.thumb
 
-	.word  _sidata
-	.word  _sdata
-	.word  _edata
-	.word  _sbss
-	.word  _ebss
+/* 
+//*** <<< Use Configuration Wizard in Context Menu >>> *** 
+*/
+
+
+/*
+// <h> Stack Configuration
+//   <o> Stack Size (in Bytes) <0x0-0xFFFFFFFF:8>
+// </h>
+*/
+
+    .equ    Stack_Size, 0x00000100
+    .section ".stack", "w"
+    .align  3
+    .globl  __cs3_stack_mem
+    .globl  __cs3_stack_size
+__cs3_stack_mem:
+    .if     Stack_Size
+    .space  Stack_Size
+    .endif
+    .size   __cs3_stack_mem,  . - __cs3_stack_mem
+    .set    __cs3_stack_size, . - __cs3_stack_mem
+
+
+/*
+// <h> Heap Configuration
+//   <o>  Heap Size (in Bytes) <0x0-0xFFFFFFFF:8>
+// </h>
+*/
+
+    .equ    Heap_Size,  0x00001000
+    
+    .section ".heap", "w"
+    .align  3
+    .globl  __cs3_heap_start
+    .globl  __cs3_heap_end
+__cs3_heap_start:
+    .if     Heap_Size
+    .space  Heap_Size
+    .endif
+__cs3_heap_end:
+
 
 /* Vector Table */
 
-    .section ".interrupt_vector"
-    .globl  __interrupt_vector
-    .type   __interrupt_vector, %object
+    .section ".cs3.interrupt_vector"
+    .globl  __cs3_interrupt_vector_cortex_m
+    .type   __cs3_interrupt_vector_cortex_m, %object
 
-__interrupt_vector:
-    .long   _estack                     /* Top of Stack                 */
-    .long   Reset_Handler               /* Reset Handler                */
+__cs3_interrupt_vector_cortex_m:
+    .long   __cs3_stack                 /* Top of Stack                 */
+    .long   __cs3_reset                 /* Reset Handler                */
     .long   NMI_Handler                 /* NMI Handler                  */
     .long   HardFault_Handler           /* Hard Fault Handler           */
     .long   MemManage_Handler           /* MPU Fault Handler            */
@@ -72,52 +107,28 @@ __interrupt_vector:
     .long   QEI_IRQHandler              /* 47: Quadrature Encoder Interface */
     .long   PLL1_IRQHandler             /* 48: PLL1 Lock (USB PLL)          */
 
-    .size   __interrupt_vector, . - __interrupt_vector
+    .size   __cs3_interrupt_vector_cortex_m, . - __cs3_interrupt_vector_cortex_m
+
+
+    .thumb
+
 
 /* Reset Handler */
-    .section  .text.Reset_Handler
-	.weak  Reset_Handler
-	.type  Reset_Handler, %function
-Reset_Handler:
+
+    .section .cs3.reset,"x",%progbits
+    .thumb_func
+    .globl  __cs3_reset_cortex_m
+    .type   __cs3_reset_cortex_m, %function
+__cs3_reset_cortex_m:
     .fnstart
-
-/* Copy the data segment initializers from flash to SRAM */
-	movs	r1, #0
-  	b	LoopCopyDataInit
-
-CopyDataInit:
-	ldr	r3, =_sidata
-	ldr	r3, [r3, r1]
-	str	r3, [r0, r1]
-	add	r1, r1, #4
-
-LoopCopyDataInit:
-	ldr	r0, =_sdata
-	ldr	r3, =_edata
-	add	r2, r0, r1
-	cmp	r2, r3
-	bcc	CopyDataInit
-	ldr	r2, =_sbss
-	b	LoopFillZerobss
-/* Zero fill the bss segment. */
-FillZerobss:
-	movs	r3, #0
-	str	r3, [r2], #4
-
-LoopFillZerobss:
-	ldr	r3, = _ebss
-	cmp	r2, r3
-	bcc	FillZerobss
-/* Call the clock system intitialization function.*/
-  	bl  SystemInit
-/* Call the application's entry point.*/
-	bl	main
-	bx	lr
-
+    LDR     R0, =SystemInit
+    BLX     R0
+    LDR     R0,=_start
+    BX      R0
     .pool
     .cantunwind
     .fnend
-    .size   Reset_Handler,.-Reset_Handler
+    .size   __cs3_reset_cortex_m,.-__cs3_reset_cortex_m
 
     .section ".text"
 

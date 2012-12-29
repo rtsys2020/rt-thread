@@ -1,17 +1,3 @@
-/*
- * File      : clock_time.c
- * This file is part of RT-Thread RTOS
- * COPYRIGHT (C) 2012, RT-Thread Development Team
- *
- * The license and distribution terms for this file may be
- * found in the file LICENSE in this distribution or at
- * http://www.rt-thread.org/license/LICENSE
- *
- * Change Logs:
- * Date           Author       Notes
- * 2012-12-08     Bernard      fix the issue of _timevalue.tv_usec initialization, 
- *                             which found by Rob <rdent@iinet.net.au>
- */
 #include <rtthread.h>
 #include <pthread.h>
 
@@ -33,7 +19,7 @@ void clock_time_system_init()
 	/* get tick */
     tick = rt_tick_get();
 
-    _timevalue.tv_usec = (tick%RT_TICK_PER_SECOND) * MICROSECOND_PER_TICK;
+    _timevalue.tv_usec = MICROSECOND_PER_SECOND - (tick%RT_TICK_PER_SECOND) * MICROSECOND_PER_TICK;
     _timevalue.tv_sec = time - tick/RT_TICK_PER_SECOND - 1;
 }
 
@@ -68,7 +54,6 @@ int clock_time_to_tick(const struct timespec *time)
 
 	return tick;
 }
-RTM_EXPORT(clock_time_to_tick);
 
 int clock_getres  (clockid_t clockid, struct timespec *res)
 {
@@ -83,7 +68,6 @@ int clock_getres  (clockid_t clockid, struct timespec *res)
 
 	return 0;
 }
-RTM_EXPORT(clock_getres);
 
 int clock_gettime (clockid_t clockid, struct timespec *tp)
 {
@@ -103,7 +87,6 @@ int clock_gettime (clockid_t clockid, struct timespec *tp)
 	
 	return 0;
 }
-RTM_EXPORT(clock_gettime);
 
 int clock_settime (clockid_t clockid, const struct timespec *tp)
 {
@@ -137,4 +120,3 @@ int clock_settime (clockid_t clockid, const struct timespec *tp)
 
 	return 0;
 }
-RTM_EXPORT(clock_settime);

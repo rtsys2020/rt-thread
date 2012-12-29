@@ -17,7 +17,6 @@ SECTIONS
     .text :
     {
         . = ALIGN(4);
-        _stext = .;
         KEEP(*(.isr_vector))            /* Startup code */
         . = ALIGN(4);
         *(.text)                        /* remaining code */
