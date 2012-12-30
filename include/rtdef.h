@@ -620,6 +620,8 @@ enum rt_device_class_type
  */
 #define RT_DEVICE_CTRL_CHAR_STREAM      0x10        /**< stream mode on char device                 */
 #define RT_DEVICE_CTRL_BLK_GETGEOME     0x10        /**< get geometry information                   */
+#define RT_DEVICE_CTRL_BLK_SYNC         0x11        /**< flush data to block device                 */
+#define RT_DEVICE_CTRL_BLK_ERASE        0x12        /**< erase block on block device                */
 #define RT_DEVICE_CTRL_NETIF_GETMAC     0x10        /**< get mac address                            */
 #define RT_DEVICE_CTRL_MTD_FORMAT       0x10        /**< format a MTD device                        */
 #define RT_DEVICE_CTRL_RTC_GET_TIME     0x10        /**< get time                                   */
