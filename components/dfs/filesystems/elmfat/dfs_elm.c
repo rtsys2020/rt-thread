@@ -12,6 +12,7 @@
  * 2008-02-22     QiuYi        The first version.
  * 2011-10-08     Bernard      fixed the block size in statfs.
  * 2011-11-23     Bernard      fixed the rename issue.
+ * 2012-12-19     Bernard      fixed the O_APPEND and lseek issue.
  */
  
 #include <rtthread.h>
@@ -326,7 +327,9 @@ int dfs_elm_open(struct dfs_fd *file)
 
 			if (file->flags & DFS_O_APPEND)
 			{
-				file->pos = f_lseek(fd, fd->fsize);
+				/* seek to the end of file */
+				f_lseek(fd, fd->fsize);
+				file->pos = fd->fptr;
 			}
 		}
 		else
@@ -451,6 +454,7 @@ int dfs_elm_lseek(struct dfs_fd *file, rt_off_t offset)
 		if (result == FR_OK)
 		{
 			/* return current position */
+			file->pos = fd->fptr;
 			return fd->fptr;
 		}
 	}
@@ -779,7 +783,15 @@ DRESULT disk_ioctl(BYTE drv, BYTE ctrl, void *buff)
 
 		*(DWORD *)buff = geometry.block_size/geometry.bytes_per_sector;
 	}
-
+	else if (ctrl == CTRL_SYNC)
+	{
+		rt_device_control(device, RT_DEVICE_CTRL_BLK_SYNC, RT_NULL);
+	}
+	else if (ctrl == CTRL_ERASE_SECTOR)
+	{
+		rt_device_control(device, RT_DEVICE_CTRL_BLK_ERASE, buff);
+	}
+	
 	return RES_OK;
 }
 

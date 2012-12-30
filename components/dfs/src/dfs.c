@@ -120,8 +120,9 @@ int fd_new(void)
 		goto __result;
 	}
 
-	d = &(fd_table[idx]);
-	d->ref_count = 1;
+    d = &(fd_table[idx]);
+    d->ref_count = 1;
+    d->magic = DFS_FD_MAGIC;
 
 __result:
 	dfs_unlock();
@@ -152,9 +153,16 @@ struct dfs_fd *fd_get(int fd)
 	dfs_lock();
 	d = &fd_table[fd];
 
-	/* increase the reference count */
-	d->ref_count ++;
-	dfs_unlock();
+    /* check dfs_fd valid or not */
+    if (d->magic != DFS_FD_MAGIC)
+    {
+        dfs_unlock();
+        return RT_NULL;
+    }
+
+    /* increase the reference count */
+    d->ref_count ++;
+    dfs_unlock();
 
 	return d;
 }

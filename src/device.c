@@ -11,6 +11,8 @@
  * Date           Author       Notes
  * 2007-01-21     Bernard      the first version
  * 2010-05-04     Bernard      add rt_device_init implementation
+ * 2012-10-20     Bernard      add device check in register function, 
+ *                             provided by Rob <rdent@iinet.net.au>
  */
 
 #include <rtthread.h>
@@ -30,6 +32,9 @@
 rt_err_t rt_device_register(rt_device_t dev, const char *name, rt_uint16_t flags)
 {
 	if (dev == RT_NULL) return -RT_ERROR;
+
+    if (rt_device_find(name) != RT_NULL)
+        return -RT_ERROR;
 
 	rt_object_init(&(dev->parent), RT_Object_Class_Device, name);
 	dev->flag = flags;
