@@ -304,18 +304,24 @@ char *dfs_normalize_path(const char *directory, const char *filename)
     {
         fullpath = rt_malloc(strlen(directory) + strlen(filename) + 2);
 
+        if (fullpath == RT_NULL)
+            return RT_NULL;
+
         /* join path and file name */
-        rt_snprintf(fullpath, strlen(directory) + strlen(filename) + 2, 
+        rt_snprintf(fullpath, strlen(directory) + strlen(filename) + 2,
             "%s/%s", directory, filename);
     }
     else
     {
         fullpath = rt_strdup(filename); /* copy string */
+
+        if (fullpath == RT_NULL)
+            return RT_NULL;
     }
 
     src = fullpath;
     dst = fullpath;
-    
+
     dst0 = dst;
     while (1)
     {
