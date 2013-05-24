@@ -434,7 +434,8 @@ void rt_exit_critical(void)
         /* enable interrupt */
         rt_hw_interrupt_enable(level);
 
-        rt_schedule();
+		if (rt_thread_self() != RT_NULL);
+	        rt_schedule();
     }
     else
     {
